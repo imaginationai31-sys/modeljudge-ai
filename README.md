@@ -23,12 +23,19 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Low-agreement quality flags
 - Reviewer statistics
 - Automated reviewer-engine tests
+- Dataset Explorer dashboard
+- Benchmark leaderboard and reviewer analytics
 
 ## Project structure
 
 ```text
 modeljudge-ai/
 ├── frontend/
+│   ├── index.html
+│   ├── dashboard.html
+│   ├── dashboard.js
+│   ├── leaderboard.html
+│   └── leaderboard.js
 ├── backend/
 │   ├── server.js
 │   ├── reviewer.js
@@ -75,6 +82,11 @@ python -m http.server 8000
 
 Open `http://localhost:8000/frontend/`.
 
+### Dashboards
+
+- Dataset Explorer: `http://localhost:8000/frontend/dashboard.html`
+- Benchmark Leaderboard: `http://localhost:8000/frontend/leaderboard.html`
+
 ### Validate and export
 
 ```bash
@@ -102,6 +114,12 @@ A reviewer submission contains a reviewer ID, evaluation ID, A/B/Tie preference,
 
 Consensus currently uses majority preference and an agreement score. Two or more reviewers make an evaluation eligible for consensus; agreement below two-thirds is flagged for additional review. This is a transparent MVP policy, not a claim of statistical reliability for production research.
 
+## Leaderboard methodology
+
+The benchmark leaderboard is a descriptive analytics layer. Reviewers are currently ranked by average stored quality score, with review count as a secondary ordering signal. Review coverage is reviews divided by evaluations and may exceed one when evaluations have multiple reviews. Tie rate is reported for context and is not, by itself, a quality ranking signal.
+
+The leaderboard should not be treated as a production reviewer-ranking system until gold-task calibration, agreement-adjusted scoring, confidence intervals, reviewer eligibility rules, and anti-gaming controls are implemented.
+
 ## Dataset philosophy
 
 ModelJudge AI separates the application from the dataset. The application is the collection and review interface; the dataset is versioned separately with a documented schema, provenance, quality checks, and licensing terms.
@@ -123,14 +141,15 @@ Reviewer IDs should be pseudonymous identifiers. Do not store names, emails, cre
 - [x] Consensus and agreement engine
 - [x] Reviewer statistics
 - [x] Automated reviewer-engine tests
-- [ ] Gold-standard reviewer calibration
+- [x] Gold calibration engine foundation
+- [x] Storage abstraction and production SQL blueprint
+- [x] Dataset Explorer dashboard
+- [x] Benchmark leaderboard
 - [ ] Database adapter
 - [ ] Reviewer authentication
 - [ ] Full inter-rater agreement statistics
-- [ ] Reviewer quality scoring against gold tasks
-- [ ] Dataset export dashboard
-- [ ] CI workflow
-- [ ] Benchmark leaderboard
+- [ ] Reviewer quality scoring against hidden gold tasks
+- [ ] Buyer dataset download center
 - [ ] Production deployment
 
 ## Status
