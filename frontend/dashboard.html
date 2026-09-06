@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ModelJudge AI dataset explorer and quality dashboard.">
+  <title>ModelJudge AI — Dataset Explorer</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .dashboard{max-width:1200px;margin:0 auto;padding:48px 24px 80px}.dash-head{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:28px}.dash-head h1{margin:6px 0;font-size:clamp(2rem,5vw,3.5rem)}.muted{color:var(--muted)}
+    .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}.metric,.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.metric strong{display:block;font-size:2rem}.metric span{color:var(--muted);font-size:.9rem}
+    .panels{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.panel h2{margin:0 0 18px;font-size:1.1rem}.bar{display:grid;grid-template-columns:110px 1fr 55px;gap:10px;align-items:center;margin:12px 0;font-size:.9rem}.track{height:10px;background:var(--border);border-radius:99px;overflow:hidden}.fill{height:100%;width:0;background:currentColor;border-radius:99px}.table-wrap{overflow:auto}.data-table{width:100%;border-collapse:collapse;font-size:.9rem}.data-table th,.data-table td{text-align:left;padding:12px 8px;border-bottom:1px solid var(--border);white-space:nowrap}.badge{display:inline-block;padding:4px 8px;border-radius:99px;background:var(--border)}.actions{display:flex;gap:10px;flex-wrap:wrap}.empty{padding:30px;text-align:center;color:var(--muted)}
+    @media(max-width:900px){.dash-grid{grid-template-columns:repeat(2,1fr)}.panels{grid-template-columns:1fr}.dash-head{align-items:start;flex-direction:column}}@media(max-width:560px){.dash-grid{grid-template-columns:1fr}.bar{grid-template-columns:85px 1fr 45px}}
+  </style>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span></a><nav><a href="index.html#evaluate">Evaluate</a><a href="dashboard.html">Dataset Explorer</a><a href="index.html#methodology">Methodology</a></nav></header>
+<main class="dashboard">
+  <section class="dash-head"><div><span class="eyebrow">DATASET EXPLORER</span><h1>Evidence before purchase.</h1><p class="muted">Inspect evaluation volume, preferences, quality scores, categories, languages, and reviewer coverage.</p></div><div class="actions"><button class="button secondary" id="refreshBtn">Refresh data</button><a class="button primary" href="index.html#evaluate">Add evaluation</a></div></section>
+  <section class="dash-grid">
+    <div class="metric"><strong id="total">—</strong><span>Evaluations</span></div><div class="metric"><strong id="unique">—</strong><span>Unique prompts</span></div><div class="metric"><strong id="verified">—</strong><span>Human verified</span></div><div class="metric"><strong id="reviewers">—</strong><span>Reviewers</span></div>
+  </section>
+  <section class="panels">
+    <div class="panel"><h2>Preference distribution</h2><div id="preferences"></div></div>
+    <div class="panel"><h2>Average quality</h2><div id="quality"></div></div>
+    <div class="panel"><h2>Categories</h2><div id="categories"></div></div>
+    <div class="panel"><h2>Languages</h2><div id="languages"></div></div>
+  </section>
+  <section class="panel" style="margin-top:18px"><h2>Recent evaluations</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Category</th><th>Preference</th><th>Quality</th><th>Verified</th><th>Date</th></tr></thead><tbody id="recent"></tbody></table></div></section>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+</main>
+<script src="dashboard.js"></script>
+</body>
+</html>
