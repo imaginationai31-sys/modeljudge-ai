@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ModelJudge AI benchmark leaderboard and dataset quality analytics.">
+  <title>ModelJudge AI — Benchmark Leaderboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .leaderboard{max-width:1200px;margin:0 auto;padding:48px 24px 80px}.head{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:28px}.head h1{margin:6px 0;font-size:clamp(2rem,5vw,3.6rem)}.muted{color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap}.hero-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}.metric,.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.06)}.metric strong{display:block;font-size:2rem}.metric span{color:var(--muted);font-size:.88rem}.panels{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel h2{margin:0 0 16px;font-size:1.1rem}.score-list{display:grid;gap:12px}.score-item{display:grid;grid-template-columns:120px 1fr 60px;gap:10px;align-items:center}.track{height:10px;background:var(--border);border-radius:99px;overflow:hidden}.fill{height:100%;background:currentColor;border-radius:99px}.table-wrap{overflow:auto}.data-table{width:100%;border-collapse:collapse}.data-table th,.data-table td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--border);white-space:nowrap}.rank{font-weight:800}.badge{display:inline-block;padding:4px 8px;border-radius:99px;background:var(--border)}.quality-pass{font-weight:700}.empty{padding:28px;text-align:center;color:var(--muted)}@media(max-width:1000px){.hero-metrics{grid-template-columns:repeat(3,1fr)}}@media(max-width:800px){.panels{grid-template-columns:1fr}.head{align-items:start;flex-direction:column}}@media(max-width:560px){.hero-metrics{grid-template-columns:1fr 1fr}.score-item{grid-template-columns:90px 1fr 50px}}
+  </style>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span></a><nav><a href="index.html#evaluate">Evaluate</a><a href="dashboard.html">Dataset Explorer</a><a href="leaderboard.html">Leaderboard</a><a href="index.html#methodology">Methodology</a></nav></header>
+<main class="leaderboard">
+  <section class="head"><div><span class="eyebrow">BENCHMARK QUALITY</span><h1>Leaderboard & quality signals.</h1><p class="muted">Compare reviewer performance, agreement, workload, and dataset health. Rankings are descriptive research metrics, not claims of model superiority.</p></div><div class="actions"><button class="button secondary" id="refreshBtn">Refresh</button><a class="button secondary" href="dashboard.html">Dataset Explorer</a></div></section>
+  <section class="hero-metrics">
+    <div class="metric"><strong id="evalCount">—</strong><span>Evaluations</span></div>
+    <div class="metric"><strong id="reviewCount">—</strong><span>Reviews</span></div>
+    <div class="metric"><strong id="reviewerCount">—</strong><span>Reviewers</span></div>
+    <div class="metric"><strong id="agreement">—</strong><span>Average reviewer score</span></div>
+    <div class="metric"><strong id="coverage">—</strong><span>Review coverage</span></div>
+  </section>
+  <section class="panels">
+    <article class="panel"><h2>Reviewer leaderboard</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Reviewer</th><th>Reviews</th><th>Avg score</th><th>Tie rate</th></tr></thead><tbody id="reviewerTable"></tbody></table></div></article>
+    <article class="panel"><h2>Quality dimensions</h2><div id="quality" class="score-list"></div></article>
+    <article class="panel"><h2>Preference balance</h2><div id="preferences" class="score-list"></div></article>
+    <article class="panel"><h2>Benchmark interpretation</h2><div class="muted"><p><strong>Reviewer score</strong> is the average of the eight stored quality dimensions across submitted reviews.</p><p><strong>Review coverage</strong> is reviews divided by evaluations and can exceed one when evaluations receive multiple reviews.</p><p><strong>Tie rate</strong> is descriptive only; it should not be used alone to rank reviewer quality.</p></div></article>
+  </section>
+  <section class="panel" style="margin-top:18px"><h2>Leaderboard methodology</h2><p class="muted">The current leaderboard ranks reviewers by average quality score, then review count. This is an MVP analytics view. Future versions should add gold-task calibration, agreement-adjusted quality, confidence intervals, and reviewer eligibility rules before using rankings for operational decisions.</p></section>
+  <div class="notice" id="notice" role="status" aria-live="polite"></div>
+</main>
+<script src="leaderboard.js"></script>
+</body>
+</html>
