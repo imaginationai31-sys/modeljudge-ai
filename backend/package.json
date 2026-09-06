@@ -11,6 +11,7 @@
     "export": "node ../scripts/dataset-engine.js",
     "filter": "node ../scripts/quality-filter.js",
     "reliability": "node ../scripts/reliability-report.js",
+    "reviewer-control": "node ../scripts/reviewer-quality-control.js",
     "migrate": "node ../scripts/migrate.js",
     "test": "node --test ../tests/*.test.js"
   },
