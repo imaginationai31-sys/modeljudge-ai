@@ -14,12 +14,18 @@ async function ensureCalibrationSchema() {
     id TEXT PRIMARY KEY,
     reviewer_id TEXT NOT NULL,
     gold_evaluation_id TEXT NOT NULL,
-    submitted_preference TEXT NOT NULL CHECK (submitted_preference IN ('A','B','Tie')),
-    expected_preference TEXT NOT NULL CHECK (expected_preference IN ('A','B','Tie')),
+    submitted_preference TEXT NOT NULL,
+    expected_preference TEXT NOT NULL,
     is_correct BOOLEAN NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (reviewer_id, gold_evaluation_id)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS reviewer_id TEXT`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS gold_evaluation_id TEXT`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS submitted_preference TEXT`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS expected_preference TEXT`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS is_correct BOOLEAN`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP`);
+  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS calibration_attempts_reviewer_task_idx ON calibration_attempts (reviewer_id, gold_evaluation_id)`);
   calibrationSchemaReady = true;
 }
 
