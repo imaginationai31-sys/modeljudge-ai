@@ -20,6 +20,9 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Reviewer-level duplicate protection
 - Consensus preference calculation
 - Advanced inter-rater agreement metrics
+- Statistical reliability reporting: Cohen's kappa, Fleiss' kappa, nominal Krippendorff's alpha
+- Deterministic bootstrap confidence intervals for reviewed score means
+- Reliability coverage and sample-size reporting
 - Low-agreement quality flags
 - Reviewer statistics
 - Gold calibration and reviewer quality scoring foundation
@@ -50,6 +53,7 @@ modeljudge-ai/
 │   ├── gold.js
 │   ├── quality-filter.js
 │   ├── quality-engine.js
+│   ├── reliability-engine.js
 │   ├── db.js
 │   ├── db-store.js
 │   ├── storage-adapter.js
@@ -69,10 +73,12 @@ modeljudge-ai/
 ├── docs/
 │   ├── DATABASE.md
 │   ├── AUTHENTICATION.md
-│   └── QUALITY_ENGINE.md
+│   ├── QUALITY_ENGINE.md
+│   └── RELIABILITY.md
 ├── scripts/
 │   ├── dataset-engine.js
 │   ├── quality-filter.js
+│   ├── reliability-report.js
 │   ├── validate-dataset.js
 │   ├── calibration-engine.js
 │   ├── create-reviewer.js
@@ -150,22 +156,30 @@ This generates:
 
 The filter is deterministic for a given input and policy, and exclusions are retained in the report for auditability. This is an operational quality gate, not a statistical claim that the resulting dataset is universally unbiased or error-free.
 
-## Step 15 — Reviewer quality and agreement
+## Step 19 — Statistical reliability
 
-The quality engine adds two buyer-relevant signals:
+ModelJudge now produces a statistical reliability evidence report. It includes:
 
-1. **Gold calibration** — measures whether a reviewer agrees with known-answer calibration tasks.
-2. **Inter-rater agreement** — measures preference agreement plus agreement across all eight quality dimensions.
+- Cohen's kappa for pairwise categorical agreement
+- Fleiss' kappa for multi-reviewer categorical agreement
+- nominal Krippendorff's alpha
+- multi-review coverage and sample counts
+- deterministic bootstrap 95% confidence intervals for reviewed dimension-score means
 
-Reviewer quality combines calibration accuracy and consistency into an operational quality score. Evaluations with weak agreement receive a `review` quality flag.
+Run:
 
-The repository gold set is synthetic demonstration data. Production gold answers should remain private and should be rotated so reviewers cannot learn the answer key.
+```bash
+cd backend
+npm run reliability
+```
 
-See `docs/QUALITY_ENGINE.md` for the methodology and limitations.
+This generates `exports/reliability-report.json`. The API also exposes `GET /api/reliability`.
+
+These metrics are descriptive evidence, not an independent certification and not proof that a model is objectively better. Buyers should evaluate them together with sample size, reviewer calibration, task composition, provenance, licensing, and exclusion policy. See `docs/RELIABILITY.md`.
 
 ## Dataset philosophy
 
-ModelJudge AI separates the application from the dataset. The dataset is versioned with schema, provenance, quality checks, and licensing documentation.
+ModelJudge AI separates the application from the dataset. The dataset is versioned with schema, provenance, quality checks, reliability evidence, and licensing documentation.
 
 Reviewer IDs should be pseudonymous. Do not store names, emails, credentials, private prompts, confidential model outputs, or other unnecessary personal information in the dataset.
 
@@ -186,7 +200,7 @@ Reviewer IDs should be pseudonymous. Do not store names, emails, credentials, pr
 - [x] Reviewer authentication
 - [x] Hidden production-ready gold-task service foundation
 - [x] Automated quality-based dataset filtering
-- [ ] Full statistical reliability metrics
+- [x] Statistical reliability metrics and evidence report
 - [ ] Automated quality-based reviewer suspension/workflow
 - [ ] Production deployment
 
