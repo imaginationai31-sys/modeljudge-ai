@@ -18,14 +18,15 @@ function cohenKappa(a, b) {
 }
 
 function fleissKappa(items) {
-  if (!items.length) return null;
-  const categories = [...new Set(items.flat())];
-  const n = items.length;
-  const ratingsPerItem = items[0].length;
-  if (!ratingsPerItem || items.some(item => item.length !== ratingsPerItem)) return null;
+  const usable = items.filter(item => item.length >= 2);
+  if (!usable.length) return null;
+  const categories = [...new Set(usable.flat())];
+  const n = usable.length;
+  const ratingsPerItem = usable[0].length;
+  if (!ratingsPerItem || usable.some(item => item.length !== ratingsPerItem)) return null;
   const proportions = Object.fromEntries(categories.map(category => [category, 0]));
   let pBar = 0;
-  for (const item of items) {
+  for (const item of usable) {
     const counts = Object.fromEntries(categories.map(category => [category, 0]));
     for (const value of item) counts[value]++;
     const sum = Object.values(counts).reduce((total, count) => total + count * count, 0);
@@ -59,9 +60,9 @@ function krippendorffAlphaNominal(items) {
   }
   const doObserved = disagreement / totalPairs;
   const totalRatings = [...categoryTotals.values()].reduce((sum, count) => sum + count, 0);
-  const deNumerator = totalRatings * (totalRatings - 1);
-  if (deNumerator === 0) return null;
-  const de = 1 - [...categoryTotals.values()].reduce((sum, count) => sum + count * (count - 1), 0) / deNumerator;
+  const denominator = totalRatings * (totalRatings - 1);
+  if (!denominator) return null;
+  const de = 1 - [...categoryTotals.values()].reduce((sum, count) => sum + count * (count - 1), 0) / denominator;
   return de === 0 ? 1 : Number((1 - doObserved / de).toFixed(5));
 }
 
@@ -69,10 +70,7 @@ function bootstrapMeanCI(values, iterations = 1000, seed = 1337) {
   const clean = values.filter(Number.isFinite);
   if (!clean.length) return null;
   let state = seed >>> 0;
-  const random = () => {
-    state = (1664525 * state + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
+  const random = () => { state = (1664525 * state + 1013904223) >>> 0; return state / 4294967296; };
   const means = [];
   for (let i = 0; i < iterations; i++) {
     let total = 0;
@@ -84,49 +82,44 @@ function bootstrapMeanCI(values, iterations = 1000, seed = 1337) {
   return { mean: Number(safeMean(clean).toFixed(5)), lower_95: Number(percentile(0.025).toFixed(5)), upper_95: Number(percentile(0.975).toFixed(5)), iterations };
 }
 
+function pairwiseReviewerKappas(byEvaluation) {
+  const pairs = new Map();
+  for (const group of byEvaluation.values()) {
+    for (let i = 0; i < group.length; i++) for (let j = i + 1; j < group.length; j++) {
+      const ids = [group[i].reviewer_id, group[j].reviewer_id].sort();
+      const key = ids.join("::");
+      if (!pairs.has(key)) pairs.set(key, { a: [], b: [] });
+      const pair = pairs.get(key);
+      if (group[i].reviewer_id === ids[0]) { pair.a.push(group[i].preferred_response); pair.b.push(group[j].preferred_response); }
+      else { pair.a.push(group[j].preferred_response); pair.b.push(group[i].preferred_response); }
+    }
+  }
+  return [...pairs.values()].map(pair => cohenKappa(pair.a, pair.b)).filter(Number.isFinite);
+}
+
 function buildReliabilityReport(records, reviews) {
   const byEvaluation = new Map();
   for (const review of reviews) {
     if (!byEvaluation.has(review.evaluation_id)) byEvaluation.set(review.evaluation_id, []);
     byEvaluation.get(review.evaluation_id).push(review);
   }
-  const preferencePairs = [];
   const preferenceItems = [];
   const reviewerDimensionScores = [];
   for (const group of byEvaluation.values()) {
-    if (group.length >= 2) {
-      preferenceItems.push(group.map(r => r.preferred_response));
-      preferencePairs.push([group[0].preferred_response, group[1].preferred_response]);
-    }
+    if (group.length >= 2) preferenceItems.push(group.map(r => r.preferred_response));
     for (const dimension of ["accuracy_a","accuracy_b","relevance_a","relevance_b","clarity_a","clarity_b","safety_a","safety_b"]) {
       const values = group.map(r => Number(r[dimension])).filter(Number.isFinite);
       if (values.length >= 2) reviewerDimensionScores.push(safeMean(values));
     }
   }
-  const kappas = preferencePairs.map(pair => cohenKappa([pair[0]], [pair[1]])).filter(Number.isFinite);
-  const allDimensionValues = reviewerDimensionScores.filter(Number.isFinite);
-  const agreementCoverage = records.length ? Number((preferenceItems.length / records.length).toFixed(5)) : 0;
+  const pairwiseKappas = pairwiseReviewerKappas(byEvaluation);
   return {
     generated_at: new Date().toISOString(),
-    methodology: "Nominal agreement metrics over independent reviewer labels; bootstrap confidence interval for mean reviewed dimension score.",
-    sample: {
-      evaluation_count: records.length,
-      reviewed_evaluation_count: byEvaluation.size,
-      multi_reviewed_evaluation_count: preferenceItems.length,
-      review_count: reviews.length,
-      multi_review_coverage: agreementCoverage
-    },
-    preference_reliability: {
-      fleiss_kappa: fleissKappa(preferenceItems),
-      krippendorff_alpha_nominal: krippendorffAlphaNominal(preferenceItems),
-      pairwise_cohen_kappa_first_two: safeMean(kappas),
-      pairwise_comparison_count: kappas.length
-    },
-    score_reliability: bootstrapMeanCI(allDimensionValues),
-    interpretation: {
-      note: "Kappa and alpha are descriptive reliability statistics, not evidence that one model is objectively better. Interpret alongside sample size, task mix, reviewer calibration, and disagreement patterns.",
-      thresholds: { strong: 0.8, acceptable: 0.67, caution: 0.4 }
-    }
+    methodology: "Nominal agreement metrics over independent reviewer preference labels; deterministic bootstrap confidence interval for mean reviewed dimension score.",
+    sample: { evaluation_count: records.length, reviewed_evaluation_count: byEvaluation.size, multi_reviewed_evaluation_count: preferenceItems.length, review_count: reviews.length, multi_review_coverage: records.length ? Number((preferenceItems.length / records.length).toFixed(5)) : 0 },
+    preference_reliability: { fleiss_kappa: fleissKappa(preferenceItems), krippendorff_alpha_nominal: krippendorffAlphaNominal(preferenceItems), mean_pairwise_cohen_kappa: safeMean(pairwiseKappas), pairwise_reviewer_comparison_count: pairwiseKappas.length },
+    score_reliability: bootstrapMeanCI(reviewerDimensionScores),
+    interpretation: { note: "Reliability statistics are descriptive evidence, not proof that one model is objectively better. Interpret with sample size, coverage, reviewer calibration, task mix, and disagreement patterns.", thresholds: { strong: 0.8, acceptable: 0.67, caution: 0.4 } }
   };
 }
 
