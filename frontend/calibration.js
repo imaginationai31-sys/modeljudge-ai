@@ -1,46 +1,43 @@
 (() => {
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c] || c));
+  const API = window.MODELJUDGE_API_URL || "/api";
   let task = null;
 
+  async function calibrationApi(path, options = {}) {
+    const token = localStorage.getItem("modeljudge_token") || "";
+    const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${API}${path}`, { ...options, headers });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      const error = new Error(data.error || data.errors?.join("; ") || `Calibration request failed (${response.status})`);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  }
+
   function injectCalibrationCenter() {
-    if ($("calibrationCenter")) return;
+    if ($("calibrationCenter")) return true;
     const anchor = $("reviewerVerification");
-    if (!anchor) return;
+    if (!anchor || !anchor.parentNode) return false;
     const section = document.createElement("section");
     section.id = "calibrationCenter";
     section.className = "panel calibration-center";
-    section.innerHTML = `
-      <div class="section-kicker">
-        <div><span class="eyebrow">REVIEWER READINESS</span><h2>Gold Calibration Center</h2><p class="muted">Prove reviewer consistency on hidden reference tasks before production verification.</p></div>
-        <span class="badge" id="calibrationStatus">Login required</span>
-      </div>
-      <div class="calibration-grid">
-        <div class="calibration-stat"><span>Attempts</span><strong id="calibrationAttempts">—</strong></div>
-        <div class="calibration-stat"><span>Accuracy</span><strong id="calibrationAccuracyCenter">—</strong></div>
-        <div class="calibration-stat"><span>Status</span><strong id="calibrationControlStatus">—</strong></div>
-      </div>
-      <div id="calibrationTask" class="calibration-task"><div class="empty">Sign in as a reviewer, then start calibration.</div></div>
-      <div class="form-actions"><button class="small-button primary-action" id="startCalibration" type="button">Start calibration</button><button class="small-button" id="submitCalibration" type="button" hidden>Submit answer</button></div>
-      <div id="calibrationResult" class="verification-note" style="margin-top:12px;display:none"></div>`;
+    section.innerHTML = `<div class="section-kicker"><div><span class="eyebrow">REVIEWER READINESS</span><h2>Gold Calibration Center</h2><p class="muted">Prove reviewer consistency on hidden reference tasks before production verification.</p></div><span class="badge" id="calibrationStatus">Login required</span></div><div class="calibration-grid"><div class="calibration-stat"><span>Attempts</span><strong id="calibrationAttempts">—</strong></div><div class="calibration-stat"><span>Accuracy</span><strong id="calibrationAccuracyCenter">—</strong></div><div class="calibration-stat"><span>Status</span><strong id="calibrationControlStatus">—</strong></div></div><div id="calibrationTask" class="calibration-task"><div class="empty">Sign in as a reviewer, then start calibration.</div></div><div class="form-actions"><button class="small-button primary-action" id="startCalibration" type="button">Start calibration</button><button class="small-button" id="submitCalibration" type="button" hidden>Submit answer</button></div><div id="calibrationResult" class="verification-note" style="margin-top:12px;display:none"></div>`;
     anchor.parentNode.insertBefore(section, anchor);
     $("startCalibration").addEventListener("click", startCalibration);
     $("submitCalibration").addEventListener("click", submitCalibration);
     loadCalibrationQuality();
+    return true;
   }
 
   function renderTask() {
     const target = $("calibrationTask");
     if (!target || !task) return;
-    target.innerHTML = `
-      <div class="response-box"><h4>Calibration prompt</h4><p>${esc(task.prompt)}</p></div>
-      <div class="response-box"><h4>Response A</h4><p>${esc(task.response_a)}</p></div>
-      <div class="response-box"><h4>Response B</h4><p>${esc(task.response_b)}</p></div>
-      <fieldset class="calibration-choice"><legend>Which response is better?</legend>
-        <label><input type="radio" name="calibrationPreference" value="A"> Response A</label>
-        <label><input type="radio" name="calibrationPreference" value="B"> Response B</label>
-        <label><input type="radio" name="calibrationPreference" value="Tie"> Tie</label>
-      </fieldset>`;
+    target.innerHTML = `<div class="response-box"><h4>Calibration prompt</h4><p>${esc(task.prompt)}</p></div><div class="response-box"><h4>Response A</h4><p>${esc(task.response_a)}</p></div><div class="response-box"><h4>Response B</h4><p>${esc(task.response_b)}</p></div><fieldset class="calibration-choice"><legend>Which response is better?</legend><label><input type="radio" name="calibrationPreference" value="A"> Response A</label><label><input type="radio" name="calibrationPreference" value="B"> Response B</label><label><input type="radio" name="calibrationPreference" value="Tie"> Tie</label></fieldset>`;
     $("submitCalibration").hidden = false;
     $("startCalibration").disabled = true;
   }
@@ -50,7 +47,7 @@
     button.disabled = true;
     button.textContent = "Loading…";
     try {
-      task = await api("/gold/task");
+      task = await calibrationApi("/gold/task");
       renderTask();
       $("calibrationResult").style.display = "none";
       $("calibrationStatus").textContent = "Task ready";
@@ -59,9 +56,8 @@
       $("calibrationResult").textContent = error.message || "Unable to load calibration task.";
       $("calibrationResult").style.display = "block";
     } finally {
-      button.disabled = false;
+      button.disabled = Boolean(task);
       button.textContent = "Start calibration";
-      if (task) button.disabled = true;
     }
   }
 
@@ -76,12 +72,11 @@
     button.disabled = true;
     button.textContent = "Submitting…";
     try {
-      const result = await api("/gold/submit", { method: "POST", body: JSON.stringify({ gold_evaluation_id: task.gold_evaluation_id, preferred_response: selected.value }) });
+      const result = await calibrationApi("/gold/submit", { method: "POST", body: JSON.stringify({ gold_evaluation_id: task.gold_evaluation_id, preferred_response: selected.value }) });
       const correct = result.correct === true;
       const resultBox = $("calibrationResult");
       resultBox.textContent = correct ? "Correct calibration answer. Continue with the next calibration task." : "Calibration answer recorded as incorrect. Review the rubric before trying the next task.";
       resultBox.style.display = "block";
-      resultBox.dataset.type = correct ? "success" : "warning";
       task = null;
       $("calibrationTask").innerHTML = `<div class="empty">Calibration answer recorded. Start the next task when ready.</div>`;
       $("submitCalibration").hidden = true;
@@ -99,7 +94,7 @@
 
   async function loadCalibrationQuality() {
     try {
-      const data = await api("/gold/me");
+      const data = await calibrationApi("/gold/me");
       $("calibrationAttempts").textContent = String(data.calibration_attempts ?? 0);
       $("calibrationAccuracyCenter").textContent = data.accuracy == null ? "—" : `${Math.round(Number(data.accuracy) * 100)}%`;
       $("calibrationControlStatus").textContent = data.status || "—";
@@ -120,8 +115,11 @@
     document.head.appendChild(style);
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function init() {
     addStyles();
-    injectCalibrationCenter();
-  });
+    if (!injectCalibrationCenter()) setTimeout(injectCalibrationCenter, 250);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+  else init();
 })();
