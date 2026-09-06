@@ -1,5 +1,5 @@
 const path = require("path");
-const { spawnSync } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const db = require("../backend/db");
 
 function runMigrations() {
@@ -15,15 +15,30 @@ function runMigrations() {
     { stdio: "inherit" }
   );
 
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    process.exit(result.status || 1);
-  }
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status || 1);
 }
 
 runMigrations();
 console.log("Starting ModelJudge AI API...");
-require("../backend/server");
+
+const server = spawn(process.execPath, [path.join(__dirname, "..", "backend", "server.js")], {
+  stdio: "inherit",
+  env: process.env
+});
+
+server.on("error", error => {
+  console.error("Unable to start ModelJudge AI API:", error.message);
+  process.exit(1);
+});
+
+server.on("exit", (code, signal) => {
+  if (signal) {
+    console.error(`ModelJudge AI API stopped by signal ${signal}`);
+    process.exit(1);
+  }
+  process.exit(code ?? 0);
+});
+
+process.on("SIGTERM", () => server.kill("SIGTERM"));
+process.on("SIGINT", () => server.kill("SIGINT"));
