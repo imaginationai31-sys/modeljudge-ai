@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ModelJudge AI · Admin Reviewer Provisioning</title>
+<style>
+:root{--bg:#0b1020;--card:#121a2e;--border:#273451;--text:#f5f7fb;--muted:#9aa7bd;--accent:#6ea8fe;--good:#36c98f;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.5}.wrap{max-width:760px;margin:0 auto;padding:32px 18px}.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 12px 35px #0003}.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}.muted{color:var(--muted)}h1{margin:6px 0 8px;font-size:30px}h2{font-size:18px;margin:0 0 8px}label{display:grid;gap:7px;margin-top:16px;font-weight:600}input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:#0c1427;color:var(--text);font:inherit}button{margin-top:20px;padding:12px 16px;border:0;border-radius:10px;background:var(--accent);color:#07111f;font-weight:800;cursor:pointer}button:disabled{opacity:.6;cursor:not-allowed}.notice{margin-top:18px;padding:12px 14px;border-radius:10px;background:#1b2740;display:none}.notice.show{display:block}.notice.good{border:1px solid #287c5d}.notice.bad{border:1px solid #8d3f48}.security{margin-top:20px;padding:14px;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted)}a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main class="wrap">
+<div class="card">
+<div class="eyebrow">ModelJudge AI · Administration</div>
+<h1>Create reviewer account</h1>
+<p class="muted">Provision a reviewer account using the server-side Admin Bootstrap Token. The token is used only for this request and is never saved by this page.</p>
+<form id="form" autocomplete="off">
+<label>Admin Bootstrap Token<input id="adminToken" type="password" required autocomplete="off" placeholder="Enter Render environment token"></label>
+<label>Reviewer ID<input id="reviewerId" required minlength="3" maxlength="64" pattern="[A-Za-z0-9_.-]+" placeholder="e.g. reviewer_001" autocomplete="off"></label>
+<label>Reviewer Password<input id="password" type="password" required minlength="12" placeholder="Use a strong password" autocomplete="new-password"></label>
+<label>Role<select id="role"><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select></label>
+<button id="submit" type="submit">Create Reviewer</button>
+</form>
+<div id="notice" class="notice" role="status"></div>
+<div class="security"><strong>Security:</strong> Keep the Admin Bootstrap Token private. Do not commit it to GitHub, put it in frontend source code, or share it in screenshots. For normal operation, use the <a href="dashboard.html">Dataset Explorer</a> reviewer login after the account is created.</div>
+</div>
+</main>
+<script>
+const API_URL=window.MODELJUDGE_API_URL||"/api";
+const $=id=>document.getElementById(id);
+function notice(message,good=false){const n=$("notice");n.textContent=message;n.className=`notice show ${good?"good":"bad"}`}
+$("form").addEventListener("submit",async e=>{
+ e.preventDefault();
+ const button=$("submit");button.disabled=true;button.textContent="Creating…";
+ try{
+  const token=$("adminToken").value;
+  const reviewer_id=$("reviewerId").value.trim();
+  const password=$("password").value;
+  const role=$("role").value;
+  const response=await fetch(`${API_URL}/auth/accounts`,{method:"POST",headers:{"Content-Type":"application/json","x-admin-bootstrap-token":token},body:JSON.stringify({reviewer_id,password,role})});
+  let data={};try{data=await response.json()}catch{}
+  if(!response.ok)throw new Error(data.error||`Account creation failed (${response.status})`);
+  notice(`Reviewer account “${reviewer_id}” created successfully. You can now sign in on the Dataset Explorer.`,true);
+  $("password").value="";$("adminToken").value="";
+ }catch(err){notice(err.message||"Unable to create reviewer account.")}
+ finally{button.disabled=false;button.textContent="Create Reviewer"}
+});
+</script>
+</body>
+</html>
