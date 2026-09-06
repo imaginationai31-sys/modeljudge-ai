@@ -35,7 +35,8 @@ async function refresh(reviewerId, actor = null, action = "automatic_evaluation"
 }
 
 async function audit(reviewerId, action, previous, next, reason, actor) {
-  await db.query("INSERT INTO reviewer_quality_audit (id,reviewer_id,action,previous_status,new_status,reason,actor_reviewer_id) VALUES ($1,$2,$3,$4,$5,$6,$7)", [`AUD-${crypto.randomUUID()}`, reviewerId, action, previous, next, reason, actor]);
+  // reviewer_quality_audit.id is a PostgreSQL UUID, so store a raw UUID here.
+  await db.query("INSERT INTO reviewer_quality_audit (id,reviewer_id,action,previous_status,new_status,reason,actor_reviewer_id) VALUES ($1,$2,$3,$4,$5,$6,$7)", [crypto.randomUUID(), reviewerId, action, previous, next, reason, actor]);
 }
 
 async function get(reviewerId) {
