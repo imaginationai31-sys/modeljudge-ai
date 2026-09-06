@@ -4,6 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { validateReview, reviewFingerprint, buildConsensus, reviewerStats } = require("./reviewer");
 const { buildReliabilityReport } = require("./reliability-engine");
+const { evaluateCertification } = require("./certification-engine");
 const store = require("./storage-adapter");
 const auth = require("./auth");
 const gold = require("./gold");
@@ -13,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 8787;
 const EXPORT_DIR = path.join(__dirname, "..", "exports");
 const dimensions = ["accuracy", "relevance", "clarity", "safety"];
-const DATASET_VERSION = "0.7.0";
+const DATASET_VERSION = "0.8.0";
 app.use(express.json({ limit: "100kb" }));
 app.use((req,res,next)=>{const origin=process.env.CORS_ORIGIN||"*";res.setHeader("Access-Control-Allow-Origin",origin);res.setHeader("Access-Control-Allow-Headers","Content-Type, Authorization");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");if(req.method==="OPTIONS")return res.sendStatus(204);next();});
 function validate(body){const errors=[];if(!body.prompt||typeof body.prompt!=="string")errors.push("prompt is required");if(!body.response_a||typeof body.response_a!=="string")errors.push("response_a is required");if(!body.response_b||typeof body.response_b!=="string")errors.push("response_b is required");if(!["A","B","Tie"].includes(body.preferred_response))errors.push("preferred_response must be A, B, or Tie");if(!body.reason||body.reason.trim().length<10)errors.push("reason must contain at least ten characters");for(const d of dimensions)for(const s of ["a","b"]){const v=body[`${d}_${s}`];if(!Number.isInteger(v)||v<1||v>5)errors.push(`${d}_${s} must be an integer from 1 to 5`);}return errors;}
@@ -40,6 +41,7 @@ app.post("/api/reviews",auth.requireAuth,async(req,res)=>{const errors=validateR
 app.get("/api/reviews/consensus/:evaluationId",async(req,res)=>{try{const reviews=await store.listReviews(req.params.evaluationId);res.json({evaluation_id:req.params.evaluationId,...buildConsensus(reviews)});}catch{res.status(500).json({error:"Unable to calculate consensus"});}});
 app.get("/api/reviewers/stats",async(req,res)=>{try{const rows=await store.reviewerStatsRows();if(rows)return res.json({reviewer_count:rows.length,reviewers:rows});const reviews=await store.listReviews();res.json({reviewer_count:new Set(reviews.map(r=>r.reviewer_id)).size,reviewers:reviewerStats(reviews)});}catch{res.status(500).json({error:"Unable to calculate reviewer statistics"});}});
 app.get("/api/reliability",async(req,res)=>{try{res.json(buildReliabilityReport(await store.listEvaluations(5000),await store.listReviews()));}catch(error){console.error(error);res.status(503).json({error:"Reliability report unavailable"});}});
+app.get("/api/certification",async(req,res)=>{try{const report=await readExport("certification-report.json");res.json(report);}catch{try{const release=await readExport("quality-report.json"), reliability=buildReliabilityReport(await store.listEvaluations(5000),await store.listReviews());const result=evaluateCertification({evaluations:release.record_count||0,reviewed_evaluations:reliability.sample.reviewed_evaluation_count||0,multi_reviewed_evaluations:reliability.sample.multi_reviewed_evaluation_count||0,average_quality_score:release.average_quality_score||0,review_coverage:reliability.sample.evaluation_count?(reliability.sample.review_count||0)/reliability.sample.evaluation_count:0,duplicate_rate:release.duplicate_rate||0,calibration_accuracy:0,reliability_sample:reliability.sample.multi_reviewed_evaluation_count||0});res.json({generated_at:new Date().toISOString(),status:result.status,certification:result,note:"Calibration evidence is unavailable until calibration records are generated."});}catch(error){return sendStorageError(res,error,"Certification report unavailable");}}});
 app.get("/api/release",async(req,res)=>{try{const report=await readExport("quality-report.json"),manifest=await readExport("manifest.json");res.json({version:manifest.version,dataset_name:manifest.dataset_name,format:manifest.format,record_count:manifest.record_count,generated_at:manifest.generated_at,average_quality_score:report.average_quality_score,human_verification_rate:report.human_verification_rate,unique_prompts:report.unique_prompts,duplicate_rate:report.duplicate_rate,schema:manifest.schema,quality_report:manifest.quality_report});}catch{res.status(503).json({error:"Release metadata is not generated yet. Run npm run export."});}});
 if(require.main===module)app.listen(PORT,()=>console.log(`ModelJudge API running on http://localhost:${PORT} using ${store.mode()} storage`));
 module.exports=app;
