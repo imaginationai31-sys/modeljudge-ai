@@ -20,8 +20,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: backend/package.json
 
       - name: Install dependencies
         working-directory: backend
@@ -39,11 +37,15 @@ jobs:
         working-directory: backend
         run: npm run export
 
-      - name: Run calibration quality engine
+      - name: Run quality filter
         working-directory: backend
-        run: node ../scripts/calibration-engine.js
+        run: npm run filter
 
-      - name: Upload quality reports
+      - name: Run reliability report
+        working-directory: backend
+        run: npm run reliability
+
+      - name: Upload buyer quality artifacts
         uses: actions/upload-artifact@v5
         with:
           name: modeljudge-quality-reports
@@ -51,3 +53,6 @@ jobs:
             exports/manifest.json
             exports/quality-report.json
             exports/reviewer-quality.json
+            exports/quality-filtered.jsonl
+            exports/quality-filter-report.json
+            exports/reliability-report.json
