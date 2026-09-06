@@ -10,6 +10,11 @@ async function listEvaluations(limit = 500) {
   return result.rows;
 }
 
+async function countEvaluations() {
+  const result = await db.query("SELECT COUNT(*)::int AS count FROM evaluations");
+  return result.rows[0].count;
+}
+
 async function findEvaluation(id) {
   const result = await db.query("SELECT * FROM evaluations WHERE id = $1 LIMIT 1", [id]);
   return result.rows[0] || null;
@@ -21,7 +26,7 @@ async function fingerprintExists(fingerprint) {
 }
 
 async function insertReview(review) {
-  await db.query(`INSERT INTO reviews (id,evaluation_id,reviewer_id,preferred_response,reason,confidence,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [review.id,review.evaluation_id,review.reviewer_id,review.preferred_response,review.reason,review.confidence,review.created_at]);
+  await db.query(`INSERT INTO reviews (id,evaluation_id,reviewer_id,preferred_response,accuracy_a,accuracy_b,relevance_a,relevance_b,clarity_a,clarity_b,safety_a,safety_b,reason,confidence,fingerprint,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`, [review.id,review.evaluation_id,review.reviewer_id,review.preferred_response,review.accuracy_a,review.accuracy_b,review.relevance_a,review.relevance_b,review.clarity_a,review.clarity_b,review.safety_a,review.safety_b,review.reason,review.confidence,review.fingerprint,review.created_at]);
   return review;
 }
 
@@ -30,4 +35,27 @@ async function listReviews(evaluationId) {
   return result.rows;
 }
 
-module.exports = { insertEvaluation, listEvaluations, findEvaluation, fingerprintExists, insertReview, listReviews };
+async function reviewFingerprintExists(fingerprint) {
+  const result = await db.query("SELECT 1 FROM reviews WHERE fingerprint = $1 LIMIT 1", [fingerprint]);
+  return result.rowCount > 0;
+}
+
+async function reviewerStatsRows() {
+  const result = await db.query(`SELECT reviewer_id, COUNT(*)::int AS review_count, AVG((accuracy_a + accuracy_b + relevance_a + relevance_b + clarity_a + clarity_b + safety_a + safety_b)::numeric / 8) AS average_score, AVG(CASE WHEN preferred_response = 'Tie' THEN 1.0 ELSE 0.0 END) AS tie_rate FROM reviews GROUP BY reviewer_id ORDER BY average_score DESC, review_count DESC`);
+  return result.rows.map(r => ({ reviewer_id: r.reviewer_id, review_count: r.review_count, average_score: Number(r.average_score), tie_rate: Number(r.tie_rate) }));
+}
+
+async function withTransaction(work) {
+  const client = await db.getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await work(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
+
+module.exports = { insertEvaluation, listEvaluations, countEvaluations, findEvaluation, fingerprintExists, insertReview, listReviews, reviewFingerprintExists, reviewerStatsRows, withTransaction };
