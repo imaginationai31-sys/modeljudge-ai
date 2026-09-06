@@ -30,6 +30,10 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Unified JSONL/PostgreSQL storage routing
 - PostgreSQL migration runner
 - Database health checks and connection pooling
+- Reviewer authentication with PBKDF2 password hashing
+- Expiring database-backed reviewer sessions
+- Authenticated review submission and reviewer identity enforcement
+- Controlled reviewer-account bootstrap
 
 ## Project structure
 
@@ -45,6 +49,7 @@ modeljudge-ai/
 │   └── releases.js
 ├── backend/
 │   ├── server.js
+│   ├── auth.js
 │   ├── db.js
 │   ├── db-store.js
 │   ├── storage-adapter.js
@@ -52,6 +57,7 @@ modeljudge-ai/
 │   ├── reviewer.js
 │   ├── schema.sql
 │   ├── migrations/001_initial.sql
+│   ├── migrations/002_reviewer_auth.sql
 │   ├── .env.example
 │   └── package.json
 ├── data/
@@ -133,19 +139,36 @@ The migration runner applies SQL files from `backend/migrations/` in lexical ord
 
 For local PostgreSQL without TLS only, use `DATABASE_SSL=false`. Never commit database credentials or `.env` files.
 
-See `docs/DATABASE.md` for production database requirements and the planned cutover controls.
+See `docs/DATABASE.md` for production database requirements and the planned security controls.
+
+## Reviewer authentication
+
+Reviewer write access is authenticated in PostgreSQL mode. Account creation is controlled by the `ADMIN_BOOTSTRAP_TOKEN` environment secret. Passwords are stored as PBKDF2-SHA-256 hashes with per-password random salts; session tokens are random bearer secrets and only their SHA-256 hashes are persisted.
+
+Authentication endpoints:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/accounts` | Provision reviewer/admin account using bootstrap secret |
+| POST | `/api/auth/login` | Create an expiring reviewer session |
+| POST | `/api/auth/logout` | Revoke current session |
+| GET | `/api/auth/me` | Return authenticated reviewer identity |
+
+Authenticated requests use `Authorization: Bearer <token>`. `POST /api/reviews` requires a valid session and derives reviewer identity from that session. A client cannot impersonate another reviewer by changing `reviewer_id`.
+
+Authentication is deliberately unavailable in JSONL-only mode because production reviewer identity requires a durable account/session store.
 
 ## Reviewer API
 
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/api/reviews` | List reviewer judgments |
-| POST | `/api/reviews` | Submit one reviewer judgment |
+| POST | `/api/reviews` | Submit one authenticated reviewer judgment |
 | GET | `/api/reviews/consensus/:evaluationId` | Calculate consensus for an evaluation |
 | GET | `/api/reviewers/stats` | Reviewer workload and scoring statistics |
 | GET | `/api/release` | Buyer-facing release metadata |
 
-A reviewer submission contains a reviewer ID, evaluation ID, A/B/Tie preference, eight quality scores, rationale, and confidence. A reviewer cannot submit two reviews for the same evaluation.
+A reviewer submission contains an evaluation ID, A/B/Tie preference, eight quality scores, rationale, and confidence. A reviewer cannot submit two reviews for the same evaluation.
 
 ## Dataset philosophy
 
@@ -176,14 +199,14 @@ Reviewer IDs should be pseudonymous identifiers. Do not store names, emails, cre
 - [x] PostgreSQL adapter foundation
 - [x] Full database-backed API cutover
 - [x] Database migration runner
-- [ ] Reviewer authentication
+- [x] Reviewer authentication
 - [ ] Full inter-rater agreement statistics
 - [ ] Reviewer quality scoring against hidden gold tasks
 - [ ] Production deployment
 
 ## Status
 
-Early MVP / research prototype. Sample data is illustrative and must not be represented as production human preference data.
+Early MVP / research prototype. Sample data is illustrative and must not be represented as production human preference data. Authentication is production-oriented groundwork and still needs rate limiting, recovery controls, and operational security before public exposure.
 
 ## License
 
