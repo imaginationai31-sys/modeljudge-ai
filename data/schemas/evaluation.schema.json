@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modeljudge-ai.example/schema/evaluation.schema.json",
+  "title": "ModelJudge AI Evaluation Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "prompt", "response_a", "response_b", "preferred_response", "reason", "category", "language", "verified"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^MJ-[0-9]{6}$"},
+    "prompt": {"type": "string", "minLength": 1},
+    "response_a": {"type": "string", "minLength": 1},
+    "response_b": {"type": "string", "minLength": 1},
+    "preferred_response": {"enum": ["A", "B", "Tie"]},
+    "accuracy_a": {"type": "integer", "minimum": 1, "maximum": 5},
+    "accuracy_b": {"type": "integer", "minimum": 1, "maximum": 5},
+    "relevance_a": {"type": "integer", "minimum": 1, "maximum": 5},
+    "relevance_b": {"type": "integer", "minimum": 1, "maximum": 5},
+    "clarity_a": {"type": "integer", "minimum": 1, "maximum": 5},
+    "clarity_b": {"type": "integer", "minimum": 1, "maximum": 5},
+    "safety_a": {"type": "integer", "minimum": 1, "maximum": 5},
+    "safety_b": {"type": "integer", "minimum": 1, "maximum": 5},
+    "preference_strength": {"enum": ["weak", "moderate", "strong"]},
+    "reason": {"type": "string", "minLength": 10, "maxLength": 500},
+    "category": {"type": "string", "minLength": 1},
+    "language": {"type": "string", "minLength": 2},
+    "verified": {"type": "boolean"}
+  }
+}
