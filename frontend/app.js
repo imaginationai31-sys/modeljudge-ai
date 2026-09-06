@@ -1,7 +1,7 @@
 const dimensions = ["Accuracy", "Relevance", "Clarity", "Safety"];
 const scores = { A: {}, B: {} };
-let preference = null;
 const API_URL = window.MODELJUDGE_API_URL || "http://localhost:8787/api";
+let preference = null;
 
 function renderScoreTable() {
   const root = document.getElementById("scoreTable");
@@ -36,7 +36,7 @@ document.querySelectorAll(".choice").forEach(button => {
   });
 });
 
-document.getElementById("reason").addEventListener("input", (event) => {
+document.getElementById("reason").addEventListener("input", event => {
   document.getElementById("charCount").textContent = `${event.target.value.length} / 500`;
 });
 
@@ -66,8 +66,7 @@ async function loadStats() {
     const response = await fetch(`${API_URL}/evaluations?limit=1`);
     if (!response.ok) return;
     const data = await response.json();
-    const count = Number(data.count || 0);
-    document.getElementById("totalEvaluations").textContent = String(12 + count);
+    document.getElementById("totalEvaluations").textContent = String(data.count ?? 0);
   } catch {
     // The static frontend remains usable when the API is offline.
   }
@@ -118,7 +117,7 @@ async function submitEvaluation() {
     if (!response.ok) throw new Error(data.errors?.join("; ") || data.error || "Unable to save evaluation");
 
     setNotice("Evaluation saved to the ModelJudge dataset.", "success");
-    document.getElementById("totalEvaluations").textContent = String(13 + 1);
+    document.getElementById("totalEvaluations").textContent = String(Number(document.getElementById("totalEvaluations").textContent || 0) + 1);
     document.getElementById("reason").value = "";
     document.getElementById("charCount").textContent = "0 / 500";
     document.querySelectorAll(".choice").forEach(b => b.classList.remove("active"));
@@ -126,7 +125,7 @@ async function submitEvaluation() {
     document.getElementById("cardB").classList.remove("selected");
     preference = null;
   } catch (error) {
-    setNotice(`API unavailable: ${error.message}. Start the backend with npm start.`, "error");
+    setNotice(`API unavailable: ${error.message}. Check the production API URL.`, "error");
   } finally {
     button.disabled = false;
     button.textContent = "Submit evaluation";
