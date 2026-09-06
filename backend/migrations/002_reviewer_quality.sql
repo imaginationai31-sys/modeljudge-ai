@@ -19,3 +19,7 @@ CREATE TABLE IF NOT EXISTS reviewer_quality_snapshots (
   status TEXT NOT NULL DEFAULT 'insufficient' CHECK (status IN ('insufficient','pass','review')),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO schema_migrations (version)
+VALUES ('002_reviewer_quality')
+ON CONFLICT (version) DO NOTHING;
