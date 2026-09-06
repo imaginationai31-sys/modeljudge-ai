@@ -26,7 +26,10 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Dataset Explorer dashboard
 - Benchmark leaderboard and reviewer analytics
 - Buyer Dataset Release Center
-- PostgreSQL production adapter foundation
+- PostgreSQL production adapter
+- Unified JSONL/PostgreSQL storage routing
+- PostgreSQL migration runner
+- Database health checks and connection pooling
 
 ## Project structure
 
@@ -44,9 +47,12 @@ modeljudge-ai/
 │   ├── server.js
 │   ├── db.js
 │   ├── db-store.js
+│   ├── storage-adapter.js
 │   ├── storage.js
 │   ├── reviewer.js
 │   ├── schema.sql
+│   ├── migrations/001_initial.sql
+│   ├── .env.example
 │   └── package.json
 ├── data/
 │   ├── sample/evaluations.jsonl
@@ -57,6 +63,9 @@ modeljudge-ai/
 │   ├── DATABASE.md
 │   └── ...
 ├── scripts/
+│   ├── dataset-engine.js
+│   ├── validate-dataset.js
+│   └── migrate.js
 ├── tests/
 ├── exports/
 ├── README.md
@@ -109,11 +118,22 @@ npm run export
 npm test
 ```
 
-## PostgreSQL adapter
+## PostgreSQL production mode
 
-JSONL remains the local-first default. A PostgreSQL adapter is now available for production integration. Configure `DATABASE_URL` and initialize `backend/schema.sql` against the target database. See `docs/DATABASE.md` for the migration and security plan.
+JSONL remains the local-first default. When `DATABASE_URL` is configured, the API routes through the PostgreSQL storage adapter. The database connection uses a bounded pool, connection timeout, idle timeout, and TLS by default for hosted databases.
 
-The adapter is deliberately separated from the HTTP layer so the application can migrate storage without changing its evaluation contract. The current API does not silently switch existing installations to PostgreSQL.
+Initialize the database with the migration runner:
+
+```bash
+cd backend
+npm run migrate
+```
+
+The migration runner applies SQL files from `backend/migrations/` in lexical order and records applied versions in `schema_migrations`.
+
+For local PostgreSQL without TLS only, use `DATABASE_SSL=false`. Never commit database credentials or `.env` files.
+
+See `docs/DATABASE.md` for production database requirements and the planned cutover controls.
 
 ## Reviewer API
 
@@ -154,7 +174,8 @@ Reviewer IDs should be pseudonymous identifiers. Do not store names, emails, cre
 - [x] Benchmark leaderboard
 - [x] Buyer dataset download center
 - [x] PostgreSQL adapter foundation
-- [ ] Full database-backed API cutover
+- [x] Full database-backed API cutover
+- [x] Database migration runner
 - [ ] Reviewer authentication
 - [ ] Full inter-rater agreement statistics
 - [ ] Reviewer quality scoring against hidden gold tasks
