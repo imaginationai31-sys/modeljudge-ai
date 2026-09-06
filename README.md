@@ -13,8 +13,10 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Preference selection and preference strength
 - Human rationale capture
 - JSONL-compatible dataset schema
-- Persistent Step 2 evaluation API
-- Validation and duplicate detection
+- Persistent evaluation API
+- Server-side validation and duplicate detection
+- Dataset validation and export scripts
+- Quality metrics and dataset manifest
 - Responsive browser interface
 
 ## Project structure
@@ -36,8 +38,11 @@ modeljudge-ai/
 │   ├── DATASET_CARD.md
 │   ├── METHODOLOGY.md
 │   └── QUALITY.md
-├── tests/
 ├── scripts/
+│   ├── dataset-engine.js
+│   └── validate-dataset.js
+├── exports/
+├── tests/
 ├── README.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
@@ -68,7 +73,25 @@ python -m http.server 8000
 
 Then open `http://localhost:8000/frontend/`.
 
-The frontend automatically sends completed evaluations to `http://localhost:8787/api`.
+### 3. Validate the dataset
+
+```bash
+cd backend
+npm run validate
+```
+
+### 4. Generate exports and quality report
+
+```bash
+npm run export
+```
+
+This creates:
+
+- `exports/evaluations.jsonl`
+- `exports/evaluations.csv`
+- `exports/manifest.json`
+- `exports/quality-report.json`
 
 ### API endpoints
 
@@ -77,12 +100,6 @@ The frontend automatically sends completed evaluations to `http://localhost:8787
 | GET | `/api/health` | API health check |
 | GET | `/api/evaluations` | Retrieve saved evaluations |
 | POST | `/api/evaluations` | Validate and save an evaluation |
-
-### Example health response
-
-```json
-{"status":"ok","service":"modeljudge-api","version":"0.2.0"}
-```
 
 ## Dataset philosophy
 
@@ -98,8 +115,10 @@ Do not add personal information, confidential prompts, private model outputs, co
 - [x] Persistent evaluation API
 - [x] Server-side validation
 - [x] Duplicate fingerprint detection
+- [x] Dataset validation pipeline
+- [x] JSONL/CSV export engine
+- [x] Dataset quality report and manifest
 - [ ] Database adapter
-- [ ] Dataset validation pipeline
 - [ ] Inter-rater agreement metrics
 - [ ] Reviewer quality controls
 - [ ] Dataset export dashboard
