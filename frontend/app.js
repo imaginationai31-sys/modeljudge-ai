@@ -1,7 +1,46 @@
 const dimensions = ["Accuracy", "Relevance", "Clarity", "Safety"];
 const scores = { A: {}, B: {} };
-const API_URL = window.MODELJUDGE_API_URL || "http://localhost:8787/api";
+const API_URL = window.MODELJUDGE_API_URL || "/api";
 let preference = null;
+let exampleIndex = 0;
+
+const examples = [
+  {
+    id: "MJ-000014",
+    prompt: "Why do we see lightning before we hear thunder?",
+    a: "We see lightning first because light travels much faster than sound. The lightning reaches our eyes almost immediately, while the sound of thunder takes longer to reach our ears.",
+    b: "We hear thunder after lightning because sound waves move faster through the atmosphere than light waves, so the sound needs extra time to arrive.",
+    category: "Science"
+  },
+  {
+    id: "MJ-000015",
+    prompt: "What is the capital of France?",
+    a: "The capital of France is Paris.",
+    b: "The capital of France is Lyon, which is the country's largest city.",
+    category: "General Knowledge"
+  },
+  {
+    id: "MJ-000016",
+    prompt: "Why does ice float on water?",
+    a: "Ice floats because solid water is less dense than liquid water. When water freezes, its molecules form a more open structure that takes up more space.",
+    b: "Ice floats because freezing makes water heavier and pushes the ice upward.",
+    category: "Science"
+  },
+  {
+    id: "MJ-000017",
+    prompt: "Explain recycling to a child in one simple sentence.",
+    a: "Recycling means turning used materials into new things instead of throwing them away.",
+    b: "Recycling means putting every piece of waste into the same bin so it can disappear.",
+    category: "Education"
+  },
+  {
+    id: "MJ-000018",
+    prompt: "What should you do before sharing a surprising claim online?",
+    a: "Check the claim against reliable sources and confirm the date and original context before sharing it.",
+    b: "Share it quickly if many people have already posted it, because popularity proves that it is true.",
+    category: "Digital Literacy"
+  }
+];
 
 function renderScoreTable() {
   const root = document.getElementById("scoreTable");
@@ -24,6 +63,29 @@ function renderScoreTable() {
   });
 }
 
+function resetEvaluationForm() {
+  preference = null;
+  document.querySelectorAll(".choice").forEach(b => b.classList.remove("active"));
+  document.getElementById("cardA").classList.remove("selected");
+  document.getElementById("cardB").classList.remove("selected");
+  document.getElementById("reason").value = "";
+  document.getElementById("charCount").textContent = "0 / 500";
+  document.getElementById("strength").value = "moderate";
+  renderScoreTable();
+  setNotice("");
+}
+
+function loadExample(index) {
+  exampleIndex = (index + examples.length) % examples.length;
+  const example = examples[exampleIndex];
+  document.getElementById("recordId").textContent = example.id;
+  document.getElementById("promptText").textContent = example.prompt;
+  document.getElementById("responseA").textContent = example.a;
+  document.getElementById("responseB").textContent = example.b;
+  document.getElementById("categoryTag").textContent = example.category;
+  resetEvaluationForm();
+}
+
 renderScoreTable();
 
 document.querySelectorAll(".choice").forEach(button => {
@@ -34,6 +96,10 @@ document.querySelectorAll(".choice").forEach(button => {
     document.getElementById("cardA").classList.toggle("selected", preference === "A");
     document.getElementById("cardB").classList.toggle("selected", preference === "B");
   });
+});
+
+document.getElementById("newExampleBtn")?.addEventListener("click", () => {
+  loadExample(exampleIndex + 1);
 });
 
 document.getElementById("reason").addEventListener("input", event => {
@@ -76,7 +142,7 @@ async function loadStats() {
     const counter = document.getElementById("totalEvaluations");
     if (counter) counter.textContent = String(data.count ?? 0);
   } catch {
-    // The static frontend remains usable when the API is offline.
+    // The evaluation workspace remains usable when the API is offline.
   }
 }
 
@@ -140,7 +206,7 @@ async function submitEvaluation() {
     preference = null;
   } catch (error) {
     if (error.status === 409) {
-      setNotice(`This evaluation is already in the dataset: ${error.message}.`, "warning");
+      setNotice(`This evaluation is already in the dataset: ${error.message}. Click New example to evaluate another pair.`, "warning");
     } else if (error instanceof TypeError) {
       setNotice(`Unable to reach the production API: ${error.message}.`, "error");
     } else {
