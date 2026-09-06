@@ -1,6 +1,7 @@
 const dimensions = ["Accuracy", "Relevance", "Clarity", "Safety"];
 const scores = { A: {}, B: {} };
 let preference = null;
+const API_URL = window.MODELJUDGE_API_URL || "http://localhost:8787/api";
 
 function renderScoreTable() {
   const root = document.getElementById("scoreTable");
@@ -42,30 +43,53 @@ document.getElementById("reason").addEventListener("input", (event) => {
 document.querySelectorAll(".copy").forEach(button => {
   button.addEventListener("click", async () => {
     const id = button.dataset.copy === "a" ? "responseA" : "responseB";
-    await navigator.clipboard.writeText(document.getElementById(id).textContent);
-    const old = button.textContent;
-    button.textContent = "Copied";
-    setTimeout(() => button.textContent = old, 1000);
+    try {
+      await navigator.clipboard.writeText(document.getElementById(id).textContent);
+      const old = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(() => button.textContent = old, 1000);
+    } catch {
+      button.textContent = "Copy failed";
+      setTimeout(() => button.textContent = "Copy", 1000);
+    }
   });
 });
 
-document.getElementById("submitBtn").addEventListener("click", () => {
-  const reason = document.getElementById("reason").value.trim();
+function setNotice(message, type = "success") {
   const notice = document.getElementById("notice");
+  notice.textContent = message;
+  notice.dataset.type = type;
+}
+
+async function loadStats() {
+  try {
+    const response = await fetch(`${API_URL}/evaluations?limit=1`);
+    if (!response.ok) return;
+    const data = await response.json();
+    const count = Number(data.count || 0);
+    document.getElementById("totalEvaluations").textContent = String(12 + count);
+  } catch {
+    // The static frontend remains usable when the API is offline.
+  }
+}
+
+async function submitEvaluation() {
+  const reason = document.getElementById("reason").value.trim();
   if (!preference) {
-    notice.textContent = "Choose Response A, Response B, or Tie before submitting.";
+    setNotice("Choose Response A, Response B, or Tie before submitting.", "error");
     return;
   }
   if (reason.length < 10) {
-    notice.textContent = "Add a short rationale of at least ten characters.";
+    setNotice("Add a short rationale of at least ten characters.", "error");
     return;
   }
 
+  const button = document.getElementById("submitBtn");
   const record = {
     id: document.getElementById("recordId").textContent,
-    prompt: document.getElementById("promptText").textContent,
-    response_a: document.getElementById("responseA").textContent,
-    response_b: document.getElementById("responseB").textContent,
+    prompt: document.getElementById("promptText").textContent.trim(),
+    response_a: document.getElementById("responseA").textContent.trim(),
+    response_b: document.getElementById("responseB").textContent.trim(),
     preferred_response: preference,
     accuracy_a: scores.A.Accuracy,
     accuracy_b: scores.B.Accuracy,
@@ -78,11 +102,36 @@ document.getElementById("submitBtn").addEventListener("click", () => {
     preference_strength: document.getElementById("strength").value,
     reason,
     category: document.getElementById("categoryTag").textContent,
-    language: "en",
-    verified: false
+    language: "en"
   };
 
-  console.log("ModelJudge evaluation record:", record);
-  notice.textContent = "Evaluation captured locally. Backend persistence will be added in the next stage.";
-  document.getElementById("totalEvaluations").textContent = "13";
-});
+  button.disabled = true;
+  button.textContent = "Saving...";
+
+  try {
+    const response = await fetch(`${API_URL}/evaluations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(record)
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.errors?.join("; ") || data.error || "Unable to save evaluation");
+
+    setNotice("Evaluation saved to the ModelJudge dataset.", "success");
+    document.getElementById("totalEvaluations").textContent = String(13 + 1);
+    document.getElementById("reason").value = "";
+    document.getElementById("charCount").textContent = "0 / 500";
+    document.querySelectorAll(".choice").forEach(b => b.classList.remove("active"));
+    document.getElementById("cardA").classList.remove("selected");
+    document.getElementById("cardB").classList.remove("selected");
+    preference = null;
+  } catch (error) {
+    setNotice(`API unavailable: ${error.message}. Start the backend with npm start.`, "error");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Submit evaluation";
+  }
+}
+
+document.getElementById("submitBtn").addEventListener("click", submitEvaluation);
+loadStats();
