@@ -7,9 +7,11 @@ const { validateReview, reviewFingerprint, buildConsensus, reviewerStats } = req
 const app = express();
 const PORT = process.env.PORT || 8787;
 const DATA_DIR = path.join(__dirname, "..", "data");
+const EXPORT_DIR = path.join(__dirname, "..", "exports");
 const DATA_FILE = path.join(DATA_DIR, "evaluations.jsonl");
 const REVIEWS_FILE = path.join(DATA_DIR, "reviews.jsonl");
 const dimensions = ["accuracy", "relevance", "clarity", "safety"];
+const DATASET_VERSION = "0.3.0";
 
 app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => {
@@ -43,22 +45,17 @@ async function readJsonl(file) {
     throw error;
   }
 }
-
+async function readExport(name) { return JSON.parse(await fs.readFile(path.join(EXPORT_DIR, name), "utf8")); }
 async function appendJsonl(file, record) {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.appendFile(file, JSON.stringify(record) + "\n", "utf8");
 }
 
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "modeljudge-api", version: "0.3.0" });
-});
+app.get("/api/health", (req, res) => res.json({ status: "ok", service: "modeljudge-api", version: DATASET_VERSION }));
 
 app.get("/api/evaluations", async (req, res) => {
-  try {
-    const records = await readJsonl(DATA_FILE);
-    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 500);
-    res.json({ count: records.length, records: records.slice(-limit).reverse() });
-  } catch { res.status(500).json({ error: "Unable to read evaluations" }); }
+  try { const records = await readJsonl(DATA_FILE); const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 500); res.json({ count: records.length, records: records.slice(-limit).reverse() }); }
+  catch { res.status(500).json({ error: "Unable to read evaluations" }); }
 });
 
 app.post("/api/evaluations", async (req, res) => {
@@ -68,65 +65,27 @@ app.post("/api/evaluations", async (req, res) => {
     const records = await readJsonl(DATA_FILE);
     const fingerprint = crypto.createHash("sha256").update([req.body.prompt, req.body.response_a, req.body.response_b].join("\n")).digest("hex");
     if (records.some(record => record.fingerprint === fingerprint)) return res.status(409).json({ error: "Duplicate evaluation pair detected", fingerprint });
-    const record = {
-      id: req.body.id || `MJ-${String(records.length + 1).padStart(6, "0")}`,
-      prompt: req.body.prompt.trim(), response_a: req.body.response_a.trim(), response_b: req.body.response_b.trim(),
-      preferred_response: req.body.preferred_response,
-      ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])),
-      preference_strength: req.body.preference_strength || "moderate", reason: req.body.reason.trim(),
-      category: req.body.category || "General Knowledge", language: req.body.language || "en",
-      verified: false, fingerprint, created_at: new Date().toISOString(), dataset_version: "0.3.0"
-    };
-    await appendJsonl(DATA_FILE, record);
-    res.status(201).json({ message: "Evaluation saved", record });
+    const record = { id: req.body.id || `MJ-${String(records.length + 1).padStart(6, "0")}`, prompt: req.body.prompt.trim(), response_a: req.body.response_a.trim(), response_b: req.body.response_b.trim(), preferred_response: req.body.preferred_response, ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])), preference_strength: req.body.preference_strength || "moderate", reason: req.body.reason.trim(), category: req.body.category || "General Knowledge", language: req.body.language || "en", verified: false, fingerprint, created_at: new Date().toISOString(), dataset_version: DATASET_VERSION };
+    await appendJsonl(DATA_FILE, record); res.status(201).json({ message: "Evaluation saved", record });
   } catch { res.status(500).json({ error: "Unable to save evaluation" }); }
 });
 
-app.get("/api/reviews", async (req, res) => {
-  try {
-    const reviews = await readJsonl(REVIEWS_FILE);
-    const evaluationId = req.query.evaluation_id;
-    const filtered = evaluationId ? reviews.filter(r => r.evaluation_id === evaluationId) : reviews;
-    res.json({ count: filtered.length, reviews: filtered.slice(-500).reverse() });
-  } catch { res.status(500).json({ error: "Unable to read reviews" }); }
-});
+app.get("/api/reviews", async (req, res) => { try { const reviews = await readJsonl(REVIEWS_FILE); const evaluationId = req.query.evaluation_id; const filtered = evaluationId ? reviews.filter(r => r.evaluation_id === evaluationId) : reviews; res.json({ count: filtered.length, reviews: filtered.slice(-500).reverse() }); } catch { res.status(500).json({ error: "Unable to read reviews" }); } });
 
 app.post("/api/reviews", async (req, res) => {
-  const errors = validateReview(req.body);
-  if (errors.length) return res.status(400).json({ error: "Review validation failed", errors });
-  try {
-    const evaluations = await readJsonl(DATA_FILE);
-    if (!evaluations.some(r => r.id === req.body.evaluation_id)) return res.status(404).json({ error: "Evaluation not found" });
-    const reviews = await readJsonl(REVIEWS_FILE);
-    const fingerprint = reviewFingerprint(req.body);
-    if (reviews.some(r => r.fingerprint === fingerprint)) return res.status(409).json({ error: "Reviewer already reviewed this evaluation" });
-    const review = {
-      id: `REV-${crypto.randomUUID()}`, evaluation_id: req.body.evaluation_id, reviewer_id: req.body.reviewer_id.trim(),
-      preferred_response: req.body.preferred_response,
-      ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])),
-      reason: req.body.reason.trim(), confidence: req.body.confidence || "medium",
-      fingerprint, created_at: new Date().toISOString(), quality_flag: "pending"
-    };
-    await appendJsonl(REVIEWS_FILE, review);
-    const evaluationReviews = [...reviews, review].filter(r => r.evaluation_id === review.evaluation_id);
-    const consensus = buildConsensus(evaluationReviews);
-    res.status(201).json({ message: "Review saved", review, consensus });
-  } catch { res.status(500).json({ error: "Unable to save review" }); }
+  const errors = validateReview(req.body); if (errors.length) return res.status(400).json({ error: "Review validation failed", errors });
+  try { const evaluations = await readJsonl(DATA_FILE); if (!evaluations.some(r => r.id === req.body.evaluation_id)) return res.status(404).json({ error: "Evaluation not found" }); const reviews = await readJsonl(REVIEWS_FILE); const fingerprint = reviewFingerprint(req.body); if (reviews.some(r => r.fingerprint === fingerprint)) return res.status(409).json({ error: "Reviewer already reviewed this evaluation" }); const review = { id: `REV-${crypto.randomUUID()}`, evaluation_id: req.body.evaluation_id, reviewer_id: req.body.reviewer_id.trim(), preferred_response: req.body.preferred_response, ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])), reason: req.body.reason.trim(), confidence: req.body.confidence || "medium", fingerprint, created_at: new Date().toISOString(), quality_flag: "pending" }; await appendJsonl(REVIEWS_FILE, review); const consensus = buildConsensus([...reviews, review].filter(r => r.evaluation_id === review.evaluation_id)); res.status(201).json({ message: "Review saved", review, consensus }); } catch { res.status(500).json({ error: "Unable to save review" }); }
 });
 
-app.get("/api/reviews/consensus/:evaluationId", async (req, res) => {
-  try {
-    const reviews = await readJsonl(REVIEWS_FILE);
-    const matching = reviews.filter(r => r.evaluation_id === req.params.evaluationId);
-    res.json({ evaluation_id: req.params.evaluationId, ...buildConsensus(matching) });
-  } catch { res.status(500).json({ error: "Unable to calculate consensus" }); }
-});
+app.get("/api/reviews/consensus/:evaluationId", async (req, res) => { try { const reviews = await readJsonl(REVIEWS_FILE); const matching = reviews.filter(r => r.evaluation_id === req.params.evaluationId); res.json({ evaluation_id: req.params.evaluationId, ...buildConsensus(matching) }); } catch { res.status(500).json({ error: "Unable to calculate consensus" }); } });
+app.get("/api/reviewers/stats", async (req, res) => { try { const reviews = await readJsonl(REVIEWS_FILE); res.json({ reviewer_count: new Set(reviews.map(r => r.reviewer_id)).size, reviewers: reviewerStats(reviews) }); } catch { res.status(500).json({ error: "Unable to calculate reviewer statistics" }); } });
 
-app.get("/api/reviewers/stats", async (req, res) => {
+app.get("/api/release", async (req, res) => {
   try {
-    const reviews = await readJsonl(REVIEWS_FILE);
-    res.json({ reviewer_count: new Set(reviews.map(r => r.reviewer_id)).size, reviewers: reviewerStats(reviews) });
-  } catch { res.status(500).json({ error: "Unable to calculate reviewer statistics" }); }
+    const report = await readExport("quality-report.json");
+    const manifest = await readExport("manifest.json");
+    res.json({ version: manifest.version, dataset_name: manifest.dataset_name, format: manifest.format, record_count: manifest.record_count, generated_at: manifest.generated_at, average_quality_score: report.average_quality_score, human_verification_rate: report.human_verification_rate, unique_prompts: report.unique_prompts, duplicate_rate: report.duplicate_rate, schema: manifest.schema, quality_report: manifest.quality_report });
+  } catch { res.status(503).json({ error: "Release metadata is not generated yet. Run npm run export." }); }
 });
 
 app.listen(PORT, () => console.log(`ModelJudge API running on http://localhost:${PORT}`));
