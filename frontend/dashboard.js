@@ -3,9 +3,10 @@ const dimensions = ["accuracy", "relevance", "clarity", "safety"];
 let evaluations = [];
 let currentEvaluation = null;
 let authToken = localStorage.getItem("modeljudge_token") || "";
+let reviewerId = localStorage.getItem("modeljudge_reviewer_id") || "";
 
 const $ = (id) => document.getElementById(id);
-const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const esc = (value) => String(value ?? "").replace(/[&<>\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c] || c));
 
 function setNotice(message, type = "success") {
   const node = $("notice");
@@ -36,7 +37,7 @@ async function api(path, options = {}) {
   let data = {};
   try { data = await response.json(); } catch (_) {}
   if (!response.ok) {
-    const error = new Error(data.error || `API request failed (${response.status})`);
+    const error = new Error(data.error || data.errors?.join("; ") || `API request failed (${response.status})`);
     error.status = response.status;
     throw error;
   }
@@ -44,6 +45,85 @@ async function api(path, options = {}) {
 }
 
 function setMetric(id, value) { if ($(id)) $(id).textContent = value; }
+
+function ensureReviewerLoginUI() {
+  if ($("reviewerLogin")) return;
+  const center = $("reviewerVerification");
+  const badge = $("reviewerStatusBadge");
+  if (!center) return;
+  const box = document.createElement("div");
+  box.id = "reviewerLogin";
+  box.className = "panel";
+  box.style.marginBottom = "18px";
+  box.innerHTML = `
+    <h2>Reviewer authentication</h2>
+    <p class="muted" style="margin-top:-8px">Sign in to verify evaluations and access reviewer quality controls.</p>
+    <form id="reviewerLoginForm" class="actions" style="align-items:end">
+      <label style="display:grid;gap:6px;flex:1;min-width:180px"><span class="muted">Reviewer ID</span><input id="reviewerIdInput" required autocomplete="username" style="padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit" value="${esc(reviewerId)}"></label>
+      <label style="display:grid;gap:6px;flex:1;min-width:180px"><span class="muted">Password</span><input id="reviewerPasswordInput" required type="password" autocomplete="current-password" style="padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit"></label>
+      <button class="button primary" type="submit" id="reviewerLoginBtn">Sign in</button>
+      <button class="button secondary" type="button" id="reviewerLogoutBtn" hidden>Sign out</button>
+    </form>`;
+  center.insertBefore(box, center.children[1] || null);
+  $("reviewerLoginForm").addEventListener("submit", loginReviewer);
+  $("reviewerLogoutBtn").addEventListener("click", logoutReviewer);
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const loggedIn = Boolean(authToken && reviewerId);
+  const badge = $("reviewerStatusBadge");
+  const loginButton = $("reviewerLoginBtn");
+  const logoutButton = $("reviewerLogoutBtn");
+  const idInput = $("reviewerIdInput");
+  if (badge) badge.textContent = loggedIn ? `Reviewer: ${reviewerId}` : "Reviewer status: not authenticated";
+  if (loginButton) loginButton.hidden = loggedIn;
+  if (logoutButton) logoutButton.hidden = !loggedIn;
+  if (idInput && loggedIn) idInput.value = reviewerId;
+}
+
+async function loginReviewer(event) {
+  event.preventDefault();
+  const id = $("reviewerIdInput")?.value.trim();
+  const password = $("reviewerPasswordInput")?.value;
+  if (!id || !password) return setNotice("Enter reviewer ID and password.", "error");
+  const button = $("reviewerLoginBtn");
+  if (button) { button.disabled = true; button.textContent = "Signing in…"; }
+  try {
+    const data = await api("/auth/login", { method: "POST", body: JSON.stringify({ reviewer_id: id, password }) });
+    const session = data.session || {};
+    authToken = session.token || session.access_token || data.token || session;
+    reviewerId = id;
+    if (!authToken || typeof authToken !== "string") throw new Error("Login response did not contain a valid session token.");
+    localStorage.setItem("modeljudge_token", authToken);
+    localStorage.setItem("modeljudge_reviewer_id", reviewerId);
+    $("reviewerPasswordInput").value = "";
+    updateAuthUI();
+    setNotice("Reviewer signed in successfully.");
+    await loadDashboard();
+  } catch (error) {
+    authToken = "";
+    setNotice(error.message || "Reviewer login failed.", "error");
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Sign in"; }
+  }
+}
+
+async function logoutReviewer() {
+  try { if (authToken) await api("/auth/logout", { method: "POST" }); } catch (_) {}
+  authToken = "";
+  reviewerId = "";
+  localStorage.removeItem("modeljudge_token");
+  localStorage.removeItem("modeljudge_reviewer_id");
+  updateAuthUI();
+  setMetric("reviewerScore", "Login required");
+  setMetric("calibrationAccuracy", "—");
+  setMetric("qualityScore", "—");
+  setMetric("consecutiveFailures", "—");
+  setMetric("controlStatus", "Not authenticated");
+  if ($("auditEvents")) $("auditEvents").innerHTML = `<div class="empty">Sign in as a reviewer to view audit history.</div>`;
+  setNotice("Reviewer signed out.");
+}
 
 function renderVerificationQueue(records) {
   const target = $("reviewQueue");
@@ -53,54 +133,60 @@ function renderVerificationQueue(records) {
   const verified = records.filter(r => r.verified === true).length;
   setMetric("verificationRate", records.length ? `${Math.round((verified / records.length) * 100)}%` : "0%");
 
-  target.innerHTML = pending.length ? pending.slice(0, 25).map((r, i) => `
-    <button type="button" class="review-queue-item ${currentEvaluation?.id === r.id ? "active" : ""}" data-evaluation-id="${esc(r.id)}">
-      <span><strong>${esc(r.id)}</strong><small>${esc(r.category || "General Knowledge")}</small></span>
-      <span class="badge">${esc(r.preferred_response || "Pending")}</span>
-    </button>`).join("") : `<div class="empty">No evaluations are waiting for verification.</div>`;
+  target.innerHTML = pending.length ? pending.slice(0, 25).map(r => `
+    <div class="queue-item">
+      <div><div class="queue-title">${esc(r.id)}</div><div class="queue-meta">${esc(r.category || "General Knowledge")} · ${esc(r.preferred_response || "Pending")}</div></div>
+      <div class="queue-actions"><button type="button" class="small-button primary-action" data-evaluation-id="${esc(r.id)}">Review</button></div>
+    </div>`).join("") : `<div class="empty">No evaluations are waiting for verification.</div>`;
 
-  target.querySelectorAll("[data-evaluation-id]").forEach(button => {
-    button.addEventListener("click", () => openVerification(button.dataset.evaluationId));
-  });
+  target.querySelectorAll("[data-evaluation-id]").forEach(button => button.addEventListener("click", () => openVerification(button.dataset.evaluationId)));
 }
 
 function populateVerificationForm(record) {
-  if (!$("verificationForm")) return;
+  const form = $("verificationForm");
+  if (!form) return;
+  $("verificationTitle").textContent = `Verify ${record.id}`;
   $("verificationContent").innerHTML = `
-    <div class="prompt-card"><label>Prompt</label><p>${esc(record.prompt)}</p></div>
-    <div class="responses">
-      <article class="response-card"><div class="response-header"><span>Response A</span></div><p>${esc(record.response_a)}</p></article>
-      <article class="response-card"><div class="response-header"><span>Response B</span></div><p>${esc(record.response_b)}</p></article>
-    </div>`;
-  dimensions.forEach(d => {
-    const a = Number(record[`${d}_a`]) || 1;
-    const b = Number(record[`${d}_b`]) || 1;
-    const selectA = $(`review_${d}_a`);
-    const selectB = $(`review_${d}_b`);
-    if (selectA) selectA.value = String(a);
-    if (selectB) selectB.value = String(b);
-  });
-  const preference = $("reviewPreference");
-  if (preference) preference.value = record.preferred_response || "A";
-  $("verificationForm").hidden = false;
-  $("verificationForm").scrollIntoView({ behavior: "smooth", block: "start" });
+    <div class="response-box"><h4>Prompt</h4><p>${esc(record.prompt)}</p></div>
+    <div class="response-box"><h4>Response A</h4><p>${esc(record.response_a)}</p></div>
+    <div class="response-box"><h4>Response B</h4><p>${esc(record.response_b)}</p></div>`;
+  $("reviewAccuracy").value = String(record.accuracy_a || 1);
+  $("reviewRelevance").value = String(record.relevance_a || 1);
+  $("reviewClarity").value = String(record.clarity_a || 1);
+  $("reviewSafety").value = String(record.safety_a || 1);
+  $("reviewComment").value = "";
+  ["checkPrompt","checkResponses","checkPreference","checkDimensions"].forEach(id => { if ($(id)) $(id).checked = false; });
+  form.classList.add("active");
+  form.hidden = false;
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function openVerification(id) {
   const record = evaluations.find(r => String(r.id) === String(id));
   if (!record) return;
+  if (!authToken) return setNotice("Sign in as a reviewer before opening an evaluation for verification.", "error");
   currentEvaluation = record;
   populateVerificationForm(record);
-  renderVerificationQueue(evaluations);
   try {
     const consensus = await api(`/reviews/consensus/${encodeURIComponent(record.id)}`);
-    const agreement = Number(consensus.agreement ?? consensus.agreement_rate ?? consensus.percent_agreement);
+    const agreement = Number(consensus.agreement_score ?? consensus.agreement_rate ?? consensus.agreement);
     if (Number.isFinite(agreement)) setMetric("reviewerAgreement", `${Math.round(agreement <= 1 ? agreement * 100 : agreement)}%`);
   } catch (_) {}
 }
 
 async function loadReviewerCenter(records) {
   renderVerificationQueue(records);
+  if (!authToken) {
+    updateAuthUI();
+    setMetric("reviewerScore", "Login required");
+    setMetric("calibrationAccuracy", "—");
+    setMetric("qualityScore", "—");
+    setMetric("consecutiveFailures", "—");
+    setMetric("controlStatus", "Not authenticated");
+    if ($("auditEvents")) $("auditEvents").innerHTML = `<div class="empty">Sign in as a reviewer to view audit history.</div>`;
+    return;
+  }
+
   try {
     const quality = await api("/reviewers/me/quality");
     const score = Number(quality.quality_score ?? quality.score ?? quality.reviewer_score);
@@ -110,55 +196,62 @@ async function loadReviewerCenter(records) {
     setMetric("qualityScore", Number.isFinite(score) ? `${score.toFixed(2)}/5` : "—");
     setMetric("consecutiveFailures", String(quality.consecutive_failures ?? quality.consecutiveFailures ?? 0));
     setMetric("controlStatus", quality.status || "Unknown");
+    if ($("qualityMeter") && Number.isFinite(score)) $("qualityMeter").style.width = `${Math.max(0, Math.min(100, (score / 5) * 100))}%`;
   } catch (error) {
+    if (error.status === 401) {
+      authToken = "";
+      localStorage.removeItem("modeljudge_token");
+      setNotice("Reviewer session expired. Please sign in again.", "warning");
+    }
+    updateAuthUI();
     setMetric("reviewerScore", "Login required");
-    setMetric("calibrationAccuracy", "—");
-    setMetric("qualityScore", "—");
-    setMetric("consecutiveFailures", "—");
-    setMetric("controlStatus", error.status === 401 ? "Not authenticated" : "Unavailable");
+    setMetric("controlStatus", "Not authenticated");
   }
 
   try {
     const history = await api("/reviewers/me/history");
     const events = history.history || [];
     const target = $("auditEvents");
-    if (target) target.innerHTML = events.length ? events.slice(0, 8).map(e => `<div class="audit-event"><strong>${esc(e.action || e.event || "Quality event")}</strong><small>${esc(e.created_at || e.createdAt || "")}</small></div>`).join("") : `<div class="empty">No audit events yet.</div>`;
-  } catch (_) {
-    if ($("auditEvents")) $("auditEvents").innerHTML = `<div class="empty">Sign in as a reviewer to view audit history.</div>`;
-  }
+    if (target) target.innerHTML = events.length ? events.slice(0, 8).map(e => `<div class="summary-row"><span>${esc(e.action || e.event || "Quality event")}</span><small>${esc(e.created_at || e.createdAt || "")}</small></div>`).join("") : `<div class="empty">No audit events yet.</div>`;
+  } catch (_) {}
 
   try {
     const reliability = await api("/reliability");
-    const sample = reliability.sample || {};
-    const agreement = Number(sample.agreement_rate ?? sample.agreement ?? reliability.agreement_rate);
+    const agreement = Number(reliability.agreement_rate ?? reliability.agreement_score ?? reliability.sample?.agreement_rate);
     if (Number.isFinite(agreement)) setMetric("reviewerAgreement", `${Math.round(agreement <= 1 ? agreement * 100 : agreement)}%`);
   } catch (_) {}
 }
 
+function checksPassed() {
+  return ["checkPrompt","checkResponses","checkPreference","checkDimensions"].every(id => $(id)?.checked);
+}
+
 async function submitVerification(action) {
   if (!currentEvaluation) return setNotice("Select an evaluation first.", "error");
-  if (!authToken) return setNotice("Reviewer login is required before submitting a verification.", "error");
+  if (!authToken || !reviewerId) return setNotice("Reviewer login is required before submitting a verification.", "error");
+  if (action === "approved" && !checksPassed()) return setNotice("Complete all four quality checks before approving an evaluation.", "error");
 
   const payload = {
     evaluation_id: currentEvaluation.id,
-    reviewer_id: localStorage.getItem("modeljudge_reviewer_id") || undefined,
-    preferred_response: $("reviewPreference")?.value || currentEvaluation.preferred_response,
-    accuracy_a: Number($("review_accuracy_a")?.value || currentEvaluation.accuracy_a),
-    accuracy_b: Number($("review_accuracy_b")?.value || currentEvaluation.accuracy_b),
-    relevance_a: Number($("review_relevance_a")?.value || currentEvaluation.relevance_a),
-    relevance_b: Number($("review_relevance_b")?.value || currentEvaluation.relevance_b),
-    clarity_a: Number($("review_clarity_a")?.value || currentEvaluation.clarity_a),
-    clarity_b: Number($("review_clarity_b")?.value || currentEvaluation.clarity_b),
-    safety_a: Number($("review_safety_a")?.value || currentEvaluation.safety_a),
-    safety_b: Number($("review_safety_b")?.value || currentEvaluation.safety_b),
-    reason: $("reviewComment")?.value.trim() || `Reviewer ${action}: verification completed based on the evaluation criteria.`,
-    confidence: $("reviewConfidence")?.value || "medium"
+    reviewer_id: reviewerId,
+    preferred_response: currentEvaluation.preferred_response,
+    accuracy_a: Number($("reviewAccuracy")?.value || currentEvaluation.accuracy_a),
+    accuracy_b: Number(currentEvaluation.accuracy_b),
+    relevance_a: Number($("reviewRelevance")?.value || currentEvaluation.relevance_a),
+    relevance_b: Number(currentEvaluation.relevance_b),
+    clarity_a: Number($("reviewClarity")?.value || currentEvaluation.clarity_a),
+    clarity_b: Number(currentEvaluation.clarity_b),
+    safety_a: Number($("reviewSafety")?.value || currentEvaluation.safety_a),
+    safety_b: Number(currentEvaluation.safety_b),
+    reason: $("reviewComment")?.value.trim() || `Reviewer ${action}: verification completed using the ModelJudge quality criteria.`,
+    confidence: "high"
   };
-  delete payload.reviewer_id;
 
   try {
     const result = await api("/reviews", { method: "POST", body: JSON.stringify(payload) });
-    setNotice(`Review saved successfully. ${result.consensus?.review_count ? `Consensus now has ${result.consensus.review_count} review(s).` : ""}`);
+    const count = result.consensus?.reviewer_count || result.consensus?.review_count;
+    setNotice(`Review saved successfully.${count ? ` Consensus now has ${count} reviewer(s).` : ""}`);
+    $("verificationForm")?.classList.remove("active");
     if ($("verificationForm")) $("verificationForm").hidden = true;
     currentEvaluation = null;
     await loadDashboard();
@@ -169,9 +262,9 @@ async function submitVerification(action) {
 
 function wireVerificationActions() {
   $("approveVerification")?.addEventListener("click", () => submitVerification("approved"));
-  $("requestRevision")?.addEventListener("click", () => submitVerification("revision requested"));
+  $("revisionVerification")?.addEventListener("click", () => submitVerification("revision requested"));
   $("rejectVerification")?.addEventListener("click", () => submitVerification("rejected"));
-  $("cancelVerification")?.addEventListener("click", () => { currentEvaluation = null; $("verificationForm").hidden = true; });
+  $("cancelVerification")?.addEventListener("click", () => { currentEvaluation = null; $("verificationForm")?.classList.remove("active"); if ($("verificationForm")) $("verificationForm").hidden = true; });
 }
 
 async function loadDashboard() {
@@ -217,6 +310,7 @@ async function loadDashboard() {
   }
 }
 
+ensureReviewerLoginUI();
 wireVerificationActions();
 $("refreshBtn")?.addEventListener("click", loadDashboard);
 loadDashboard();
