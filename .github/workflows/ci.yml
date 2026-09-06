@@ -15,36 +15,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
-
       - name: Install dependencies
         working-directory: backend
         run: npm install
-
       - name: Run tests
         working-directory: backend
         run: npm test
-
       - name: Validate dataset
         working-directory: backend
         run: npm run validate
-
       - name: Build dataset exports
         working-directory: backend
         run: npm run export
-
       - name: Run quality filter
         working-directory: backend
         run: npm run filter
-
       - name: Run reliability report
         working-directory: backend
         run: npm run reliability
-
+      - name: Run reviewer control report
+        working-directory: backend
+        run: npm run reviewer-control
+      - name: Run certification readiness report
+        working-directory: backend
+        run: npm run certification
       - name: Upload buyer quality artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -56,3 +54,5 @@ jobs:
             exports/quality-filtered.jsonl
             exports/quality-filter-report.json
             exports/reliability-report.json
+            exports/reviewer-control-report.json
+            exports/certification-report.json
