@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ModelJudge AI — human preference and AI response evaluation workspace.">
+  <title>ModelJudge AI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="ModelJudge AI home">
+      <span class="brand-mark">MJ</span>
+      <span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span>
+    </a>
+    <nav>
+      <a href="#evaluate">Evaluate</a>
+      <a href="#dataset">Dataset</a>
+      <a href="#methodology">Methodology</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">HUMAN PREFERENCE BENCHMARK</span>
+        <h1>Evaluate AI responses with <span>structured judgment.</span></h1>
+        <p>Compare two responses, score quality dimensions, explain your preference, and turn each completed review into a machine-readable evaluation record.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#evaluate">Start evaluation</a>
+          <a class="button secondary" href="#dataset">View dataset</a>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="status-dot"></div>
+        <div><strong>MVP online</strong><span>Local-first evaluation workspace</span></div>
+      </div>
+    </section>
+
+    <section class="stats" id="dataset">
+      <div><strong id="totalEvaluations">12</strong><span>Sample evaluations</span></div>
+      <div><strong>4</strong><span>Quality dimensions</span></div>
+      <div><strong>12</strong><span>Evaluation categories</span></div>
+      <div><strong>JSONL</strong><span>Dataset format</span></div>
+    </section>
+
+    <section class="workspace" id="evaluate">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">EVALUATION WORKSPACE</span>
+          <h2>Compare responses</h2>
+        </div>
+        <span class="record-id" id="recordId">MJ-000013</span>
+      </div>
+
+      <div class="prompt-card">
+        <label>Prompt</label>
+        <p id="promptText">Explain photosynthesis to a ten-year-old using a simple analogy.</p>
+        <span class="tag" id="categoryTag">Education</span>
+      </div>
+
+      <div class="responses">
+        <article class="response-card" id="cardA">
+          <div class="response-header"><span>Response A</span><button class="copy" data-copy="a">Copy</button></div>
+          <p id="responseA">Photosynthesis is like a tiny food factory inside a plant. Leaves use sunlight as energy, water from the roots, and carbon dioxide from the air to make sugar that helps the plant grow. Oxygen is released as a by-product.</p>
+        </article>
+        <article class="response-card" id="cardB">
+          <div class="response-header"><span>Response B</span><button class="copy" data-copy="b">Copy</button></div>
+          <p id="responseB">Think of a plant as a solar-powered kitchen. Sunlight provides the energy, while water and carbon dioxide are the ingredients. The leaf uses them to make food for the plant and sends oxygen into the air.</p>
+        </article>
+      </div>
+
+      <div class="evaluation-panel">
+        <div class="panel-title"><span>1</span><div><strong>Choose the better response</strong><small>Consider the prompt, not writing style alone.</small></div></div>
+        <div class="choice-grid" role="radiogroup" aria-label="Preferred response">
+          <button class="choice" data-preference="A">Response A</button>
+          <button class="choice" data-preference="B">Response B</button>
+          <button class="choice" data-preference="Tie">Tie</button>
+        </div>
+
+        <div class="score-grid">
+          <div class="panel-title"><span>2</span><div><strong>Score each response</strong><small>Use one to five for each dimension.</small></div></div>
+          <div class="score-table" id="scoreTable"></div>
+        </div>
+
+        <div class="reason-block">
+          <label for="reason">Why did you choose this preference?</label>
+          <textarea id="reason" rows="4" maxlength="500" placeholder="Explain the most important difference between the responses..."></textarea>
+          <div class="reason-meta"><span>Human-written rationale</span><span id="charCount">0 / 500</span></div>
+        </div>
+
+        <div class="final-row">
+          <label class="select-wrap">Preference strength
+            <select id="strength"><option value="weak">Weak</option><option value="moderate" selected>Moderate</option><option value="strong">Strong</option></select>
+          </label>
+          <button class="button primary" id="submitBtn">Submit evaluation</button>
+        </div>
+        <div class="notice" id="notice" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="methodology" id="methodology">
+      <div>
+        <span class="eyebrow">DATA QUALITY</span>
+        <h2>Built for auditable evaluations.</h2>
+        <p>Every record is designed to preserve the prompt, both responses, preference, scoring dimensions, rationale, category, and verification state. Later versions will add reviewer agreement, duplicate detection, provenance, and automated validation.</p>
+      </div>
+      <div class="quality-list">
+        <div><b>01</b><span>Structured schema</span></div>
+        <div><b>02</b><span>Human rationale</span></div>
+        <div><b>03</b><span>Quality controls</span></div>
+        <div><b>04</b><span>Versioned exports</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>ModelJudge AI</span><span>Early MVP · Sample data only</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
