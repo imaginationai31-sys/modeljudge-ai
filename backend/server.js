@@ -9,13 +9,13 @@ const app = express();
 const PORT = process.env.PORT || 8787;
 const EXPORT_DIR = path.join(__dirname, "..", "exports");
 const dimensions = ["accuracy", "relevance", "clarity", "safety"];
-const DATASET_VERSION = "0.4.0";
+const DATASET_VERSION = "0.5.0";
 
 app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => {
   const origin = process.env.CORS_ORIGIN || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -37,6 +37,13 @@ function validate(body) {
 
 async function readExport(name) { return JSON.parse(await fs.readFile(path.join(EXPORT_DIR, name), "utf8")); }
 
+function sendStorageError(res, error, fallback = "Unable to save record") {
+  console.error(error);
+  if (error && error.code === "23505") return res.status(409).json({ error: "Duplicate record violates a database uniqueness rule" });
+  if (error && error.code === "23503") return res.status(400).json({ error: "Referenced evaluation does not exist" });
+  return res.status(500).json({ error: fallback });
+}
+
 app.get("/api/health", async (req, res) => {
   try {
     if (store.mode() === "postgres") await require("./db").query("SELECT 1");
@@ -57,9 +64,9 @@ app.post("/api/evaluations", async (req, res) => {
   try {
     const fingerprint = crypto.createHash("sha256").update([req.body.prompt, req.body.response_a, req.body.response_b].join("\n")).digest("hex");
     if (await store.evaluationFingerprintExists(fingerprint)) return res.status(409).json({ error: "Duplicate evaluation pair detected", fingerprint });
-    const record = { id: req.body.id || `MJ-${Date.now()}`, prompt: req.body.prompt.trim(), response_a: req.body.response_a.trim(), response_b: req.body.response_b.trim(), preferred_response: req.body.preferred_response, ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])), preference_strength: req.body.preference_strength || "moderate", reason: req.body.reason.trim(), category: req.body.category || "General Knowledge", language: req.body.language || "en", verified: false, fingerprint, created_at: new Date().toISOString(), dataset_version: DATASET_VERSION };
+    const record = { id: req.body.id || `MJ-${crypto.randomUUID()}`, prompt: req.body.prompt.trim(), response_a: req.body.response_a.trim(), response_b: req.body.response_b.trim(), preferred_response: req.body.preferred_response, ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])), preference_strength: req.body.preference_strength || "moderate", reason: req.body.reason.trim(), category: req.body.category || "General Knowledge", language: req.body.language || "en", verified: false, fingerprint, created_at: new Date().toISOString(), dataset_version: DATASET_VERSION };
     await store.insertEvaluation(record); res.status(201).json({ message: "Evaluation saved", record });
-  } catch (error) { console.error(error); res.status(500).json({ error: "Unable to save evaluation" }); }
+  } catch (error) { return sendStorageError(res, error, "Unable to save evaluation"); }
 });
 
 app.get("/api/reviews", async (req, res) => { try { const reviews = await store.listReviews(req.query.evaluation_id); res.json({ count: reviews.length, reviews }); } catch { res.status(500).json({ error: "Unable to read reviews" }); } });
@@ -70,10 +77,10 @@ app.post("/api/reviews", async (req, res) => {
     if (!await store.findEvaluation(req.body.evaluation_id)) return res.status(404).json({ error: "Evaluation not found" });
     const reviews = await store.listReviews(req.body.evaluation_id);
     const fingerprint = reviewFingerprint(req.body);
-    if (reviews.some(r => r.fingerprint === fingerprint)) return res.status(409).json({ error: "Reviewer already reviewed this evaluation" });
+    if (await store.reviewFingerprintExists(fingerprint) || reviews.some(r => r.reviewer_id === req.body.reviewer_id.trim())) return res.status(409).json({ error: "Reviewer already reviewed this evaluation" });
     const review = { id: `REV-${crypto.randomUUID()}`, evaluation_id: req.body.evaluation_id, reviewer_id: req.body.reviewer_id.trim(), preferred_response: req.body.preferred_response, ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])), reason: req.body.reason.trim(), confidence: req.body.confidence || "medium", fingerprint, created_at: new Date().toISOString(), quality_flag: "pending" };
     await store.insertReview(review); const consensus = buildConsensus([...reviews, review]); res.status(201).json({ message: "Review saved", review, consensus });
-  } catch (error) { console.error(error); res.status(500).json({ error: "Unable to save review" }); }
+  } catch (error) { return sendStorageError(res, error, "Unable to save review"); }
 });
 
 app.get("/api/reviews/consensus/:evaluationId", async (req, res) => { try { const reviews = await store.listReviews(req.params.evaluationId); res.json({ evaluation_id: req.params.evaluationId, ...buildConsensus(reviews) }); } catch { res.status(500).json({ error: "Unable to calculate consensus" }); } });
