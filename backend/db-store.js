@@ -46,7 +46,8 @@ async function reviewerStatsRows() {
 }
 
 async function withTransaction(work) {
-  const client = await db.getPool().connect();
+  const client = db.getPool().connect ? await db.getPool().connect() : null;
+  if (!client) throw new Error("PostgreSQL is not configured");
   try {
     await client.query("BEGIN");
     const result = await work(client);
