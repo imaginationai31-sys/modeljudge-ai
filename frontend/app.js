@@ -122,7 +122,13 @@ async function submitEvaluation() {
       body: JSON.stringify(record)
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.errors?.join("; ") || data.error || "Unable to save evaluation");
+
+    if (!response.ok) {
+      const message = data.errors?.join("; ") || data.error || "Unable to save evaluation";
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
 
     setNotice("Evaluation saved to the ModelJudge dataset.", "success");
     updateEvaluationCounter(1);
@@ -133,7 +139,13 @@ async function submitEvaluation() {
     document.getElementById("cardB").classList.remove("selected");
     preference = null;
   } catch (error) {
-    setNotice(`API unavailable: ${error.message}. Check the production API URL.`, "error");
+    if (error.status === 409) {
+      setNotice(`This evaluation is already in the dataset: ${error.message}.`, "warning");
+    } else if (error instanceof TypeError) {
+      setNotice(`Unable to reach the production API: ${error.message}.`, "error");
+    } else {
+      setNotice(`Could not save evaluation: ${error.message}.`, "error");
+    }
   } finally {
     button.disabled = false;
     button.textContent = "Submit evaluation";
