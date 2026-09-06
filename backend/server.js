@@ -11,20 +11,25 @@ const gold = require("./gold");
 const db = require("./db");
 const reviewerControl = require("./reviewer-quality-control-db");
 const buyerApi = require("./buyer-api");
+const security = require("./security");
 const app = express();
 const PORT = process.env.PORT || 8787;
 const EXPORT_DIR = path.join(__dirname, "..", "exports");
 const RELEASE_DIR = path.join(__dirname, "..", "releases");
 const dimensions = ["accuracy", "relevance", "clarity", "safety"];
 const DATASET_VERSION = "0.9.0";
-app.use(express.json({ limit: "100kb" }));
-app.use((req,res,next)=>{const origin=process.env.CORS_ORIGIN||"*";res.setHeader("Access-Control-Allow-Origin",origin);res.setHeader("Access-Control-Allow-Headers","Content-Type, Authorization, X-API-Key");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");if(req.method==="OPTIONS")return res.sendStatus(204);next();});
+app.disable("x-powered-by");
+if (process.env.TRUST_PROXY === "true") app.set("trust proxy", 1);
+app.use(security.securityHeaders);
+app.use(security.rateLimit);
+app.use(express.json({ limit: "100kb", strict: true }));
+app.use((req,res,next)=>{const origin=process.env.CORS_ORIGIN||"*";res.setHeader("Access-Control-Allow-Origin",origin);res.setHeader("Vary","Origin");res.setHeader("Access-Control-Allow-Headers","Content-Type, Authorization, X-API-Key");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS");if(req.method==="OPTIONS")return res.sendStatus(204);next();});
 function validate(body){const errors=[];if(!body.prompt||typeof body.prompt!=="string")errors.push("prompt is required");if(!body.response_a||typeof body.response_a!=="string")errors.push("response_a is required");if(!body.response_b||typeof body.response_b!=="string")errors.push("response_b is required");if(!["A","B","Tie"].includes(body.preferred_response))errors.push("preferred_response must be A, B, or Tie");if(!body.reason||body.reason.trim().length<10)errors.push("reason must contain at least ten characters");for(const d of dimensions)for(const s of ["a","b"]){const v=body[`${d}_${s}`];if(!Number.isInteger(v)||v<1||v>5)errors.push(`${d}_${s} must be an integer from 1 to 5`);}return errors;}
 async function readExport(name){return JSON.parse(await fs.readFile(path.join(EXPORT_DIR,name),"utf8"));}
-async function readRelease(version,name){return fs.readFile(path.join(RELEASE_DIR,`v${version}`,name),"utf8");}
+async function readRelease(version,name){if(!/^\d+\.\d+\.\d+$/.test(version))throw new Error("Invalid release version");return fs.readFile(path.join(RELEASE_DIR,`v${version}`,name),"utf8");}
 function sendStorageError(res,error,fallback){console.error(error);if(error?.code==="23505")return res.status(409).json({error:"Duplicate record violates a database uniqueness rule"});if(error?.code==="23503")return res.status(400).json({error:"Referenced record does not exist"});return res.status(500).json({error:fallback});}
 function requireAdmin(req,res,next){auth.requireAuth(req,res,()=>{if(req.auth.role!=="admin")return res.status(403).json({error:"Admin role required"});next();});}
-app.get("/api/health",async(req,res)=>{try{if(store.mode()==="postgres")await db.query("SELECT 1");res.json({status:"ok",service:"modeljudge-api",version:DATASET_VERSION,storage:store.mode(),authentication:store.mode()==="postgres"?"enabled":"requires-postgres",gold_calibration:"enabled",reliability_reporting:"enabled",reviewer_quality_control:store.mode()==="postgres"?"enabled":"requires-postgres",buyer_api:store.mode()==="postgres"?"enabled":"requires-postgres"});}catch{res.status(503).json({status:"error",service:"modeljudge-api",version:DATASET_VERSION,storage:store.mode()});}});
+app.get("/api/health",async(req,res)=>{try{if(store.mode()==="postgres")await db.query("SELECT 1");res.json({status:"ok",service:"modeljudge-api",version:DATASET_VERSION,storage:store.mode(),authentication:store.mode()==="postgres"?"enabled":"requires-postgres",gold_calibration:"enabled",reliability_reporting:"enabled",reviewer_quality_control:store.mode()==="postgres"?"enabled":"requires-postgres",buyer_api:store.mode()==="postgres"?"enabled":"requires-postgres",security:{headers:true,rate_limit:true,request_body_limit:"100kb"}});}catch{res.status(503).json({status:"error",service:"modeljudge-api",version:DATASET_VERSION,storage:store.mode()});}});
 app.post("/api/auth/login",async(req,res)=>{const{reviewer_id,password}=req.body||{};if(typeof reviewer_id!=="string"||typeof password!=="string")return res.status(400).json({error:"reviewer_id and password are required"});try{const session=await auth.login(reviewer_id.trim(),password);if(!session)return res.status(401).json({error:"Invalid reviewer credentials"});res.json(session);}catch(error){return sendStorageError(res,error,"Unable to authenticate reviewer");}});
 app.post("/api/auth/logout",auth.requireAuth,async(req,res)=>{try{await auth.revoke(auth.bearerToken(req));res.json({message:"Logged out"});}catch{res.status(500).json({error:"Unable to revoke session"});}});
 app.get("/api/auth/me",auth.requireAuth,(req,res)=>res.json({reviewer_id:req.auth.reviewer_id,role:req.auth.role}));
