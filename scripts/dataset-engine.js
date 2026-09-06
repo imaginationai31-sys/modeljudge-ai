@@ -5,6 +5,7 @@ const path = require("path");
 
 const DATA_FILE = path.join(__dirname, "..", "data", "evaluations.jsonl");
 const EXPORT_DIR = path.join(__dirname, "..", "exports");
+const DATASET_VERSION = "0.7.0";
 
 async function readRecords() {
   try {
@@ -40,7 +41,7 @@ function metrics(records) {
     preference_distribution: preferences,
     category_distribution: categories,
     language_distribution: languages,
-    dataset_version: "0.6.0"
+    dataset_version: DATASET_VERSION
   };
 }
 
@@ -50,7 +51,7 @@ async function main() {
   await fs.mkdir(EXPORT_DIR, { recursive: true });
   await fs.writeFile(path.join(EXPORT_DIR, "evaluations.jsonl"), records.map(r => JSON.stringify(r)).join("\n") + (records.length ? "\n" : ""));
   await fs.writeFile(path.join(EXPORT_DIR, "evaluations.csv"), toCsv(records));
-  await fs.writeFile(path.join(EXPORT_DIR, "manifest.json"), JSON.stringify({ dataset_name: "ModelJudge AI Human Preference Evaluations", version: "0.6.0", format: "JSONL", record_count: records.length, generated_at: report.generated_at, schema: "data/schemas/evaluation.schema.json", quality_report: "exports/quality-report.json" }, null, 2) + "\n");
+  await fs.writeFile(path.join(EXPORT_DIR, "manifest.json"), JSON.stringify({ dataset_name: "ModelJudge AI Human Preference Evaluations", version: DATASET_VERSION, format: "JSONL", record_count: records.length, generated_at: report.generated_at, schema: "data/schemas/evaluation.schema.json", quality_report: "exports/quality-report.json", reliability_report: "exports/reliability-report.json" }, null, 2) + "\n");
   await fs.writeFile(path.join(EXPORT_DIR, "quality-report.json"), JSON.stringify(report, null, 2) + "\n");
   console.log(JSON.stringify(report, null, 2));
 }
