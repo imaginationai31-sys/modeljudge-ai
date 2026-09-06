@@ -4,82 +4,75 @@ Human preference and AI response evaluation platform for building structured mod
 
 ## What is ModelJudge AI?
 
-ModelJudge AI is an open-source evaluation workspace designed to compare two AI responses using consistent human scoring criteria. Each completed evaluation can become a structured, auditable dataset record for benchmarking and post-training research.
+ModelJudge AI is an evaluation workspace for comparing AI responses using consistent human scoring criteria. Completed evaluations can become structured, auditable dataset records for benchmarking and post-training research.
 
-## Current features
+## Buyer-ready capabilities
 
-- A/B response comparison
+- Pairwise A/B response evaluation
 - Accuracy, relevance, clarity, and safety scoring
 - Human rationale capture
-- Persistent evaluation API
 - Server-side validation and duplicate detection
-- JSONL/CSV dataset export
-- Multi-reviewer records and consensus
-- Cohen's kappa, Fleiss' kappa, nominal Krippendorff's alpha
+- JSONL/CSV dataset exports
+- Multi-reviewer consensus and agreement metrics
+- Cohen's kappa, Fleiss' kappa, and nominal Krippendorff's alpha
 - Deterministic bootstrap confidence intervals
 - Gold calibration with server-side answer checking
-- Automated dataset quality filtering
-- PostgreSQL adapter and migrations
+- Automated quality filtering
+- PostgreSQL production storage and ordered migrations
 - PBKDF2 reviewer authentication and expiring sessions
-- Reviewer quality controls with active, warning, insufficient, and suspended states
-- Reviewer quality audit history and admin controls
-- Dataset Explorer
-- Benchmark leaderboard
-- Buyer Dataset Release Center
-- Buyer Quality Center and certification-readiness evidence
-- CI-generated quality, reliability, reviewer-control, and certification reports
+- Reviewer quality controls and audit history
+- Versioned release manifests with SHA-256 checksums
+- Buyer API-key authentication, quotas, and access logging
+- Buyer portal and release inspection
+- Quality Center and certification-readiness evidence
+- CI verification and production deployment workflow
 
-## Buyer Quality Center
+## Buyer workflow
 
-Open `frontend/quality.html` for the buyer-oriented quality dashboard. It combines dataset volume, review coverage, reliability evidence, and certification gates in one view.
+```text
+Evaluate → Validate → Multi-review → Calibrate reviewers
+     ↓
+Quality filter → Reliability evidence → Certification gates
+     ↓
+Versioned release → SHA-256 manifest → Authenticated buyer access
+```
 
-The certification engine is intentionally transparent and conservative. A `ready` result means configured internal gates passed; it is not independent third-party certification.
+## Buyer resources
 
-Default gates include minimum evaluation/review volume, average quality, review coverage, duplicate rate, calibration accuracy, and reliability sample size. See `docs/CERTIFICATION.md`.
+- `docs/BUYER_ONBOARDING.md` — buyer workflow, data fields, verification, and security
+- `docs/API_QUICKSTART.md` — authenticated API examples
+- `docs/BUYER_API.md` — buyer API architecture and controls
+- `docs/DEMO_GUIDE.md` — safe product demonstration flow
+- `docs/BUYER_RELEASES.md` — release packaging
+- `docs/CERTIFICATION.md` — certification-readiness methodology
+- `docs/RELIABILITY.md` — reliability methodology
+- `docs/PRODUCTION_DEPLOYMENT.md` — production operations
+- `docs/SECURITY_HARDENING.md` — security controls
 
 ## Project structure
 
 ```text
 modeljudge-ai/
 ├── frontend/
-│   ├── quality.html
-│   ├── quality.js
-│   ├── dashboard.html
-│   ├── leaderboard.html
-│   └── releases.html
 ├── backend/
 │   ├── server.js
 │   ├── auth.js
 │   ├── gold.js
-│   ├── certification-engine.js
-│   ├── reviewer-quality-control.js
-│   ├── reviewer-quality-control-db.js
-│   ├── quality-filter.js
-│   ├── quality-engine.js
-│   ├── reliability-engine.js
-│   ├── db.js
-│   ├── db-store.js
-│   ├── storage-adapter.js
-│   ├── storage.js
-│   ├── reviewer.js
+│   ├── buyer-api.js
+│   ├── buyer-management.js
+│   ├── security.js
+│   ├── *-engine.js
+│   ├── db*.js
+│   ├── storage*.js
 │   ├── migrations/
 │   └── package.json
 ├── data/
 ├── docs/
-│   ├── CERTIFICATION.md
-│   ├── DATABASE.md
-│   ├── AUTHENTICATION.md
-│   ├── QUALITY_ENGINE.md
-│   └── RELIABILITY.md
 ├── scripts/
-│   ├── certification-report.js
-│   ├── reviewer-quality-control.js
-│   ├── dataset-engine.js
-│   ├── quality-filter.js
-│   ├── reliability-report.js
-│   └── migrate.js
 ├── tests/
 ├── exports/
+├── releases/
+├── .github/workflows/
 ├── README.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
@@ -102,16 +95,16 @@ From the repository root, serve the frontend with `python -m http.server 8000` a
 
 ## PostgreSQL mode
 
-JSONL remains the local-first default. When `DATABASE_URL` is configured, the API routes through PostgreSQL.
+JSONL is intended for local development. Configure `DATABASE_URL` for PostgreSQL-backed operation and run:
 
 ```bash
 cd backend
 npm run migrate
 ```
 
-The migration runner applies SQL files from `backend/migrations/` in lexical order and records applied versions in `schema_migrations`.
+Production should use TLS, restricted database access, backups, monitoring, and a tested restore procedure.
 
-## Quality and certification commands
+## Quality pipeline
 
 ```bash
 cd backend
@@ -122,60 +115,51 @@ npm run filter
 npm run reliability
 npm run reviewer-control
 npm run certification
+npm run release
 ```
 
-The certification command generates `exports/certification-report.json`. CI uploads this alongside the other buyer-quality artifacts.
+CI runs the quality pipeline before an optional production deployment hook. Deployment is disabled until the deployment environment explicitly sets `DEPLOY_ENABLED=true`.
 
-## Reviewer quality enforcement
+## Buyer API
 
-Authenticated reviewers must establish sufficient calibration history before submitting reviews. Low-quality reviewers can enter `warning` or `suspended` states. Review submissions refresh quality state, and administrative suspend/reinstate actions are recorded in the quality audit table.
+Production buyer access requires PostgreSQL and a buyer API key. Keys are hashed at rest and the raw key is returned only when created or rotated. Dataset access is logged by buyer and release version.
 
-Relevant endpoints:
+Never expose buyer keys in frontend source code, URLs, public repositories, screenshots, or support tickets.
 
-```text
-GET  /api/reviewers/me/quality
-GET  /api/reviewers/me/history
-GET  /api/admin/reviewer-quality
-POST /api/admin/reviewer-quality/:reviewerId/reinstate
-POST /api/admin/reviewer-quality/:reviewerId/suspend
-GET  /api/certification
-```
+## Data and provenance
 
-## Dataset philosophy
+Sample records are illustrative. Before commercial distribution, review the provenance and licensing of every task, prompt, model response, annotation, and external source included in a release.
 
-ModelJudge AI separates the application from the dataset. Raw records, quality-filtered records, reliability evidence, reviewer controls, provenance, and release metadata should be inspectable independently.
+Quality metrics describe the evaluation process; they are not guarantees of universal factual correctness or proof that one model is objectively superior.
 
-Reviewer IDs should be pseudonymous. Do not store names, emails, credentials, private prompts, confidential model outputs, or other unnecessary personal information in the dataset.
+## Release readiness
 
-## Roadmap
-
-- [x] Evaluation interface foundation
-- [x] Structured evaluation schema
+- [x] Evaluation interface and schema
 - [x] Persistent evaluation API
 - [x] Validation and duplicate detection
 - [x] JSONL/CSV export engine
-- [x] Dataset quality report and manifest
-- [x] Multi-reviewer evaluation records
-- [x] Consensus and agreement engine
-- [x] Advanced agreement metrics
-- [x] Gold calibration foundation
-- [x] Reviewer quality scoring
-- [x] PostgreSQL adapter and migration system
-- [x] Reviewer authentication
-- [x] Automated dataset quality filtering
-- [x] Statistical reliability metrics and evidence report
-- [x] Reviewer quality-control workflow
-- [x] Buyer Quality Center and certification-readiness engine
-- [ ] Production deployment hardening
+- [x] Multi-reviewer consensus
+- [x] Reliability metrics
+- [x] Gold calibration
+- [x] Reviewer authentication and quality control
+- [x] PostgreSQL adapter and migrations
+- [x] Automated quality filtering
+- [x] Versioned buyer releases
+- [x] Buyer API and buyer portal
+- [x] Security hardening
+- [x] Production deployment workflow
+- [x] Buyer onboarding and demo documentation
+- [ ] Live production infrastructure configuration
 - [ ] Independent external dataset audit
+- [ ] Commercial licensing/provenance review for a real buyer dataset
 
-## Status
+## Current status
 
-Advanced MVP / research prototype. Sample data is illustrative and must not be represented as production human preference data. Production use still requires operational security, private gold tasks, rate limiting, monitoring, backup/recovery, deployment hardening, privacy review, and licensing/provenance review.
+**Advanced MVP / buyer-ready software foundation.** The repository contains a serious evaluation-data platform foundation, but a live commercial deployment, production-scale dataset, independent audit, and final licensing/provenance review remain business and operational activities.
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See `LICENSE`. Dataset-specific commercial rights and third-party content rights must be reviewed separately.
 
 ## Contributing
 
