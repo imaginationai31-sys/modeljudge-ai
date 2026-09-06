@@ -1,0 +1,73 @@
+name: ModelJudge AI Production Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Test
+        working-directory: backend
+        run: npm test
+      - name: Validate dataset
+        working-directory: backend
+        run: npm run validate
+      - name: Build exports
+        working-directory: backend
+        run: npm run export
+      - name: Quality filter
+        working-directory: backend
+        run: npm run filter
+      - name: Reliability report
+        working-directory: backend
+        run: npm run reliability
+      - name: Reviewer control report
+        working-directory: backend
+        run: npm run reviewer-control
+      - name: Certification report
+        working-directory: backend
+        run: npm run certification
+      - name: Build buyer release
+        working-directory: backend
+        run: npm run release
+
+  deploy:
+    needs: verify
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy hook
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+        run: |
+          test -n "$DEPLOY_HOOK_URL"
+          curl --fail --show-error --silent --retry 3 --max-time 30 -X POST "$DEPLOY_HOOK_URL"
+      - name: Verify production health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          test -n "$HEALTHCHECK_URL"
+          for i in 1 2 3 4 5; do
+            if curl --fail --show-error --silent --max-time 15 "$HEALTHCHECK_URL" | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Production health check failed'
+          exit 1
