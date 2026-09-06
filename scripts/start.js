@@ -1,6 +1,12 @@
 const path = require("path");
+const http = require("http");
 const { spawn, spawnSync } = require("child_process");
+const express = require("../backend/node_modules/express");
 const db = require("../backend/db");
+
+const PUBLIC_PORT = Number(process.env.PORT || 10000);
+const BACKEND_PORT = 8787;
+const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 
 function runMigrations() {
   if (!db.isConfigured()) {
@@ -19,26 +25,86 @@ function runMigrations() {
   if (result.status !== 0) process.exit(result.status || 1);
 }
 
+function proxyApi(req, res) {
+  const headers = { ...req.headers, host: `127.0.0.1:${BACKEND_PORT}` };
+  const options = {
+    hostname: "127.0.0.1",
+    port: BACKEND_PORT,
+    path: req.originalUrl,
+    method: req.method,
+    headers
+  };
+
+  const proxy = http.request(options, backendRes => {
+    res.writeHead(backendRes.statusCode || 502, backendRes.headers);
+    backendRes.pipe(res);
+  });
+
+  proxy.on("error", error => {
+    console.error("API proxy error:", error.message);
+    if (!res.headersSent) res.status(502).json({ error: "API unavailable" });
+    else res.end();
+  });
+
+  req.pipe(proxy);
+}
+
 runMigrations();
-console.log("Starting ModelJudge AI API...");
+console.log(`Starting ModelJudge AI API internally on port ${BACKEND_PORT}...`);
 
-const server = spawn(process.execPath, [path.join(__dirname, "..", "backend", "server.js")], {
-  stdio: "inherit",
-  env: process.env
-});
+const backendEnv = { ...process.env, PORT: String(BACKEND_PORT) };
+const backend = spawn(
+  process.execPath,
+  [path.join(__dirname, "..", "backend", "server.js")],
+  { stdio: "inherit", env: backendEnv }
+);
 
-server.on("error", error => {
+backend.on("error", error => {
   console.error("Unable to start ModelJudge AI API:", error.message);
   process.exit(1);
 });
 
-server.on("exit", (code, signal) => {
-  if (signal) {
-    console.error(`ModelJudge AI API stopped by signal ${signal}`);
-    process.exit(1);
-  }
-  process.exit(code ?? 0);
+const app = express();
+app.disable("x-powered-by");
+
+app.use((req, res, next) => {
+  if (req.path === "/api" || req.path.startsWith("/api/")) return proxyApi(req, res);
+  next();
 });
 
-process.on("SIGTERM", () => server.kill("SIGTERM"));
-process.on("SIGINT", () => server.kill("SIGINT"));
+app.use(express.static(FRONTEND_DIR, { extensions: ["html"] }));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, "index.html"));
+});
+
+app.use((req, res) => {
+  if (req.method === "GET" && !req.path.startsWith("/api/")) {
+    return res.sendFile(path.join(FRONTEND_DIR, "index.html"));
+  }
+  res.status(404).json({ error: "Not found" });
+});
+
+const publicServer = app.listen(PUBLIC_PORT, "0.0.0.0", () => {
+  console.log(`ModelJudge AI public web service listening on port ${PUBLIC_PORT}`);
+});
+
+function shutdown(signal) {
+  publicServer.close(() => process.exit(0));
+  if (!backend.killed) backend.kill(signal);
+}
+
+backend.on("exit", (code, signal) => {
+  if (signal) {
+    console.error(`ModelJudge AI API stopped by signal ${signal}`);
+    shutdown("SIGTERM");
+    return;
+  }
+  if (code !== 0) {
+    console.error(`ModelJudge AI API exited with code ${code}`);
+    shutdown("SIGTERM");
+  }
+});
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
