@@ -1,12 +1,14 @@
 {
   "name": "modeljudge-ai-api",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Local-first API for ModelJudge AI human preference evaluations",
+  "description": "Local-first API and dataset engine for ModelJudge AI human preference evaluations",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "validate": "node ../scripts/validate-dataset.js",
+    "export": "node ../scripts/dataset-engine.js"
   },
   "engines": {
     "node": ">=20"
