@@ -3,6 +3,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const { validateReview, reviewFingerprint, buildConsensus, reviewerStats } = require("./reviewer");
+const { buildReliabilityReport } = require("./reliability-engine");
 const store = require("./storage-adapter");
 const auth = require("./auth");
 const gold = require("./gold");
@@ -12,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 8787;
 const EXPORT_DIR = path.join(__dirname, "..", "exports");
 const dimensions = ["accuracy", "relevance", "clarity", "safety"];
-const DATASET_VERSION = "0.6.0";
+const DATASET_VERSION = "0.7.0";
 
 app.use(express.json({ limit: "100kb" }));
 app.use((req, res, next) => { const origin = process.env.CORS_ORIGIN || "*"; res.setHeader("Access-Control-Allow-Origin", origin); res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization"); res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS"); if (req.method === "OPTIONS") return res.sendStatus(204); next(); });
@@ -29,9 +30,10 @@ function validate(body) {
 }
 
 async function readExport(name) { return JSON.parse(await fs.readFile(path.join(EXPORT_DIR, name), "utf8")); }
+async function readJsonl(name) { const text = await fs.readFile(path.join(__dirname, "..", "data", name), "utf8"); return text.split("\n").filter(Boolean).map(JSON.parse); }
 function sendStorageError(res, error, fallback) { console.error(error); if (error?.code === "23505") return res.status(409).json({ error: "Duplicate record violates a database uniqueness rule" }); if (error?.code === "23503") return res.status(400).json({ error: "Referenced record does not exist" }); return res.status(500).json({ error: fallback }); }
 
-app.get("/api/health", async (req, res) => { try { if (store.mode() === "postgres") await db.query("SELECT 1"); res.json({ status: "ok", service: "modeljudge-api", version: DATASET_VERSION, storage: store.mode(), authentication: store.mode() === "postgres" ? "enabled" : "requires-postgres", gold_calibration: "enabled" }); } catch { res.status(503).json({ status: "error", service: "modeljudge-api", version: DATASET_VERSION, storage: store.mode() }); } });
+app.get("/api/health", async (req, res) => { try { if (store.mode() === "postgres") await db.query("SELECT 1"); res.json({ status: "ok", service: "modeljudge-api", version: DATASET_VERSION, storage: store.mode(), authentication: store.mode() === "postgres" ? "enabled" : "requires-postgres", gold_calibration: "enabled", reliability_reporting: "enabled" }); } catch { res.status(503).json({ status: "error", service: "modeljudge-api", version: DATASET_VERSION, storage: store.mode() }); } });
 
 app.post("/api/auth/login", async (req, res) => { const { reviewer_id, password } = req.body || {}; if (typeof reviewer_id !== "string" || typeof password !== "string") return res.status(400).json({ error: "reviewer_id and password are required" }); try { const session = await auth.login(reviewer_id.trim(), password); if (!session) return res.status(401).json({ error: "Invalid reviewer credentials" }); res.json(session); } catch (error) { return sendStorageError(res, error, "Unable to authenticate reviewer"); } });
 app.post("/api/auth/logout", auth.requireAuth, async (req, res) => { try { await auth.revoke(auth.bearerToken(req)); res.json({ message: "Logged out" }); } catch { res.status(500).json({ error: "Unable to revoke session" }); } });
@@ -48,6 +50,7 @@ app.get("/api/reviews", async (req, res) => { try { const reviews = await store.
 app.post("/api/reviews", auth.requireAuth, async (req, res) => { const errors = validateReview(req.body); if (errors.length) return res.status(400).json({ error: "Review validation failed", errors }); try { if (req.body.reviewer_id && req.body.reviewer_id !== req.auth.reviewer_id) return res.status(403).json({ error: "reviewer_id does not match authenticated reviewer" }); if (!await store.findEvaluation(req.body.evaluation_id)) return res.status(404).json({ error: "Evaluation not found" }); const reviews = await store.listReviews(req.body.evaluation_id); const reviewerId = req.auth.reviewer_id; const payload = { ...req.body, reviewer_id: reviewerId }; const fingerprint = reviewFingerprint(payload); if (await store.reviewFingerprintExists(fingerprint) || reviews.some(r => r.reviewer_id === reviewerId)) return res.status(409).json({ error: "Reviewer already reviewed this evaluation" }); const review = { id: `REV-${crypto.randomUUID()}`, evaluation_id: req.body.evaluation_id, reviewer_id: reviewerId, submitted_by_account_id: req.auth.id, preferred_response: req.body.preferred_response, ...Object.fromEntries(dimensions.flatMap(d => [[`${d}_a`, req.body[`${d}_a`]], [`${d}_b`, req.body[`${d}_b`]]])), reason: req.body.reason.trim(), confidence: req.body.confidence || "medium", fingerprint, created_at: new Date().toISOString(), quality_flag: "pending" }; await store.insertReview(review); const consensus = buildConsensus([...reviews, review]); res.status(201).json({ message: "Review saved", review, consensus }); } catch (error) { return sendStorageError(res, error, "Unable to save review"); } });
 app.get("/api/reviews/consensus/:evaluationId", async (req, res) => { try { const reviews = await store.listReviews(req.params.evaluationId); res.json({ evaluation_id: req.params.evaluationId, ...buildConsensus(reviews) }); } catch { res.status(500).json({ error: "Unable to calculate consensus" }); } });
 app.get("/api/reviewers/stats", async (req, res) => { try { const pgRows = await store.reviewerStatsRows(); if (pgRows) return res.json({ reviewer_count: pgRows.length, reviewers: pgRows }); const reviews = await store.listReviews(); res.json({ reviewer_count: new Set(reviews.map(r => r.reviewer_id)).size, reviewers: reviewerStats(reviews) }); } catch { res.status(500).json({ error: "Unable to calculate reviewer statistics" }); } });
+app.get("/api/reliability", async (req, res) => { try { const records = await store.listEvaluations(5000); const reviews = await store.listReviews(); res.json(buildReliabilityReport(records, reviews)); } catch (error) { console.error(error); res.status(503).json({ error: "Reliability report unavailable" }); } });
 app.get("/api/release", async (req, res) => { try { const report = await readExport("quality-report.json"); const manifest = await readExport("manifest.json"); res.json({ version: manifest.version, dataset_name: manifest.dataset_name, format: manifest.format, record_count: manifest.record_count, generated_at: manifest.generated_at, average_quality_score: report.average_quality_score, human_verification_rate: report.human_verification_rate, unique_prompts: report.unique_prompts, duplicate_rate: report.duplicate_rate, schema: manifest.schema, quality_report: manifest.quality_report }); } catch { res.status(503).json({ error: "Release metadata is not generated yet. Run npm run export." }); } });
 
 if (require.main === module) app.listen(PORT, () => console.log(`ModelJudge API running on http://localhost:${PORT} using ${store.mode()} storage`));
