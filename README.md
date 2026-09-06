@@ -23,6 +23,9 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Low-agreement quality flags
 - Reviewer statistics
 - Gold calibration and reviewer quality scoring foundation
+- Hidden calibration task service with server-side answer checking
+- Automated dataset quality filtering
+- Dataset quality-filter report and filtered JSONL export
 - Automated reviewer-engine tests
 - Dataset Explorer dashboard
 - Benchmark leaderboard and reviewer analytics
@@ -44,6 +47,8 @@ modeljudge-ai/
 ├── backend/
 │   ├── server.js
 │   ├── auth.js
+│   ├── gold.js
+│   ├── quality-filter.js
 │   ├── quality-engine.js
 │   ├── db.js
 │   ├── db-store.js
@@ -67,6 +72,7 @@ modeljudge-ai/
 │   └── QUALITY_ENGINE.md
 ├── scripts/
 │   ├── dataset-engine.js
+│   ├── quality-filter.js
 │   ├── validate-dataset.js
 │   ├── calibration-engine.js
 │   ├── create-reviewer.js
@@ -120,6 +126,30 @@ POST /api/reviews
 
 Authenticated requests use `Authorization: Bearer <token>`. Review submissions derive reviewer identity from the authenticated session rather than trusting a client-supplied reviewer ID.
 
+## Step 16 — Hidden gold calibration
+
+Authenticated reviewers can receive calibration tasks without receiving the expected preference. The server loads the answer key privately, records the submitted preference, and calculates correctness server-side. Reviewers cannot select a gold task for another reviewer, and already-attempted tasks are not selected again until the available pool is exhausted.
+
+The default demonstration gold file is `data/gold/gold-evaluations.jsonl`. Production deployments should set `GOLD_TASKS_FILE` to a private location outside the repository and protect the answer key with appropriate filesystem or secret-management controls.
+
+## Step 17 — Automated dataset quality filtering
+
+The quality filter creates a buyer-oriented inclusion layer without modifying the raw dataset. By default, a record must have at least two reviews, an average eight-dimension review score of at least 3.5, and preference agreement of at least 0.67. Optional policy controls can also require human verification or exclude Tie preferences.
+
+Run:
+
+```bash
+cd backend
+npm run filter
+```
+
+This generates:
+
+- `exports/quality-filtered.jsonl` — records that passed the active policy
+- `exports/quality-filter-report.json` — inclusion/exclusion counts and reasons
+
+The filter is deterministic for a given input and policy, and exclusions are retained in the report for auditability. This is an operational quality gate, not a statistical claim that the resulting dataset is universally unbiased or error-free.
+
 ## Step 15 — Reviewer quality and agreement
 
 The quality engine adds two buyer-relevant signals:
@@ -154,9 +184,10 @@ Reviewer IDs should be pseudonymous. Do not store names, emails, credentials, pr
 - [x] Reviewer quality scoring foundation
 - [x] PostgreSQL adapter and migration system
 - [x] Reviewer authentication
-- [ ] Hidden production gold-task service
+- [x] Hidden production-ready gold-task service foundation
+- [x] Automated quality-based dataset filtering
 - [ ] Full statistical reliability metrics
-- [ ] Automated quality-based dataset filtering
+- [ ] Automated quality-based reviewer suspension/workflow
 - [ ] Production deployment
 
 ## Status
