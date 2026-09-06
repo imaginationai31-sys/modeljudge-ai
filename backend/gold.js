@@ -4,8 +4,24 @@ const path = require("path");
 const db = require("./db");
 
 const DEFAULT_GOLD_FILE = path.join(__dirname, "..", "data", "gold", "gold-evaluations.jsonl");
+let calibrationSchemaReady = false;
 
 function goldFile() { return process.env.GOLD_TASKS_FILE || DEFAULT_GOLD_FILE; }
+
+async function ensureCalibrationSchema() {
+  if (!db.isConfigured() || calibrationSchemaReady) return;
+  await db.query(`CREATE TABLE IF NOT EXISTS calibration_attempts (
+    id TEXT PRIMARY KEY,
+    reviewer_id TEXT NOT NULL,
+    gold_evaluation_id TEXT NOT NULL,
+    submitted_preference TEXT NOT NULL CHECK (submitted_preference IN ('A','B','Tie')),
+    expected_preference TEXT NOT NULL CHECK (expected_preference IN ('A','B','Tie')),
+    is_correct BOOLEAN NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (reviewer_id, gold_evaluation_id)
+  )`);
+  calibrationSchemaReady = true;
+}
 
 async function loadGoldTasks() {
   const text = await fs.readFile(goldFile(), "utf8");
@@ -23,7 +39,10 @@ function pickTask(tasks, reviewerId, excludedIds = []) {
 }
 
 async function reviewerAttemptIds(reviewerId) {
-  if (db.isConfigured()) return (await db.query("SELECT gold_evaluation_id FROM calibration_attempts WHERE reviewer_id = $1", [reviewerId])).rows.map(row => row.gold_evaluation_id);
+  if (db.isConfigured()) {
+    await ensureCalibrationSchema();
+    return (await db.query("SELECT gold_evaluation_id FROM calibration_attempts WHERE reviewer_id = $1", [reviewerId])).rows.map(row => row.gold_evaluation_id);
+  }
   try { return (await fs.readFile(path.join(__dirname, "..", "data", "calibration-attempts.jsonl"), "utf8")).split("\n").filter(Boolean).map(JSON.parse).filter(row => row.reviewer_id === reviewerId).map(row => row.gold_evaluation_id); }
   catch (error) { if (error.code === "ENOENT") return []; throw error; }
 }
@@ -48,15 +67,19 @@ async function submit({ reviewerId, goldEvaluationId, preferredResponse }) {
   if ((await reviewerAttemptIds(reviewerId)).includes(goldEvaluationId)) return { error: "Calibration task already attempted", status: 409 };
   const correct = task.preferred_response === preferredResponse;
   const record = { id: `CAL-${crypto.randomUUID()}`, reviewer_id: reviewerId, gold_evaluation_id: goldEvaluationId, submitted_preference: preferredResponse, expected_preference: task.preferred_response, is_correct: correct, created_at: new Date().toISOString() };
-  if (db.isConfigured()) await db.query("INSERT INTO calibration_attempts (id,reviewer_id,gold_evaluation_id,submitted_preference,expected_preference,is_correct,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)", [record.id, record.reviewer_id, record.gold_evaluation_id, record.submitted_preference, record.expected_preference, record.is_correct, record.created_at]);
-  else await fs.appendFile(path.join(__dirname, "..", "data", "calibration-attempts.jsonl"), JSON.stringify(record) + "\n", "utf8");
+  if (db.isConfigured()) {
+    await ensureCalibrationSchema();
+    await db.query("INSERT INTO calibration_attempts (id,reviewer_id,gold_evaluation_id,submitted_preference,expected_preference,is_correct,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)", [record.id, record.reviewer_id, record.gold_evaluation_id, record.submitted_preference, record.expected_preference, record.is_correct, record.created_at]);
+  } else await fs.appendFile(path.join(__dirname, "..", "data", "calibration-attempts.jsonl"), JSON.stringify(record) + "\n", "utf8");
   return { id: record.id, correct, gold_evaluation_id: goldEvaluationId };
 }
 
 async function reviewerQuality(reviewerId) {
   let rows;
-  if (db.isConfigured()) rows = (await db.query("SELECT is_correct FROM calibration_attempts WHERE reviewer_id = $1 ORDER BY created_at DESC", [reviewerId])).rows;
-  else {
+  if (db.isConfigured()) {
+    await ensureCalibrationSchema();
+    rows = (await db.query("SELECT is_correct FROM calibration_attempts WHERE reviewer_id = $1 ORDER BY created_at DESC", [reviewerId])).rows;
+  } else {
     try { rows = (await fs.readFile(path.join(__dirname, "..", "data", "calibration-attempts.jsonl"), "utf8")).split("\n").filter(Boolean).map(JSON.parse).filter(r => r.reviewer_id === reviewerId); }
     catch (e) { if (e.code === "ENOENT") rows = []; else throw e; }
   }
@@ -65,4 +88,4 @@ async function reviewerQuality(reviewerId) {
   return { reviewer_id: reviewerId, calibration_attempts: count, correct, accuracy: count ? Number((correct / count).toFixed(5)) : null, status: count < 3 ? "insufficient" : correct / count >= 0.8 ? "pass" : "review" };
 }
 
-module.exports = { loadGoldTasks, publicTask, getTask, validateSubmission, submit, reviewerQuality, pickTask };
+module.exports = { loadGoldTasks, publicTask, getTask, validateSubmission, submit, reviewerQuality, pickTask, ensureCalibrationSchema };
