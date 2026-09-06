@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ModelJudge AI evaluation workspace for comparing and scoring AI responses.">
+  <title>ModelJudge AI — Evaluate</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="ModelJudge AI home">
+      <span class="brand-mark">MJ</span>
+      <span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span>
+    </a>
+    <nav>
+      <a href="evaluate.html" aria-current="page">Evaluate</a>
+      <a href="dashboard.html">Dataset Explorer</a>
+      <a href="index.html#methodology">Methodology</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="workspace" id="evaluate">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">EVALUATION WORKSPACE</span>
+          <h1>Compare responses</h1>
+          <p>Choose the stronger answer, score both responses, explain your decision, and submit a structured evaluation.</p>
+        </div>
+        <span class="record-id" id="recordId">MJ-000013</span>
+      </div>
+
+      <div class="prompt-card">
+        <label>Prompt</label>
+        <p id="promptText">Explain photosynthesis to a ten-year-old using a simple analogy.</p>
+        <span class="tag" id="categoryTag">Education</span>
+      </div>
+
+      <div class="responses">
+        <article class="response-card" id="cardA">
+          <div class="response-header"><span>Response A</span><button class="copy" data-copy="a">Copy</button></div>
+          <p id="responseA">Photosynthesis is like a tiny food factory inside a plant. Leaves use sunlight as energy, water from the roots, and carbon dioxide from the air to make sugar that helps the plant grow. Oxygen is released as a by-product.</p>
+        </article>
+        <article class="response-card" id="cardB">
+          <div class="response-header"><span>Response B</span><button class="copy" data-copy="b">Copy</button></div>
+          <p id="responseB">Think of a plant as a solar-powered kitchen. Sunlight provides the energy, while water and carbon dioxide are the ingredients. The leaf uses them to make food for the plant and sends oxygen into the air.</p>
+        </article>
+      </div>
+
+      <div class="evaluation-panel">
+        <div class="panel-title"><span>1</span><div><strong>Choose the better response</strong><small>Consider the prompt, not writing style alone.</small></div></div>
+        <div class="choice-grid" role="radiogroup" aria-label="Preferred response">
+          <button class="choice" data-preference="A">Response A</button>
+          <button class="choice" data-preference="B">Response B</button>
+          <button class="choice" data-preference="Tie">Tie</button>
+        </div>
+
+        <div class="score-grid">
+          <div class="panel-title"><span>2</span><div><strong>Score each response</strong><small>Use one to five for each dimension.</small></div></div>
+          <div class="score-table" id="scoreTable"></div>
+        </div>
+
+        <div class="reason-block">
+          <label for="reason">Why did you choose this preference?</label>
+          <textarea id="reason" rows="4" maxlength="500" placeholder="Explain the most important difference between the responses..."></textarea>
+          <div class="reason-meta"><span>Human-written rationale</span><span id="charCount">0 / 500</span></div>
+        </div>
+
+        <div class="final-row">
+          <label class="select-wrap">Preference strength
+            <select id="strength"><option value="weak">Weak</option><option value="moderate" selected>Moderate</option><option value="strong">Strong</option></select>
+          </label>
+          <button class="button primary" id="submitBtn">Submit evaluation</button>
+        </div>
+        <div class="notice" id="notice" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>ModelJudge AI</span><a href="dashboard.html">Open Dataset Explorer →</a></footer>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
