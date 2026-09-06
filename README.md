@@ -25,6 +25,8 @@ ModelJudge AI is an open-source evaluation workspace designed to compare two AI 
 - Automated reviewer-engine tests
 - Dataset Explorer dashboard
 - Benchmark leaderboard and reviewer analytics
+- Buyer Dataset Release Center
+- PostgreSQL production adapter foundation
 
 ## Project structure
 
@@ -35,10 +37,16 @@ modeljudge-ai/
 │   ├── dashboard.html
 │   ├── dashboard.js
 │   ├── leaderboard.html
-│   └── leaderboard.js
+│   ├── leaderboard.js
+│   ├── releases.html
+│   └── releases.js
 ├── backend/
 │   ├── server.js
+│   ├── db.js
+│   ├── db-store.js
+│   ├── storage.js
 │   ├── reviewer.js
+│   ├── schema.sql
 │   └── package.json
 ├── data/
 │   ├── sample/evaluations.jsonl
@@ -46,11 +54,10 @@ modeljudge-ai/
 │   ├── reviews.jsonl
 │   └── schemas/evaluation.schema.json
 ├── docs/
+│   ├── DATABASE.md
+│   └── ...
 ├── scripts/
-│   ├── dataset-engine.js
-│   └── validate-dataset.js
 ├── tests/
-│   └── reviewer.test.js
 ├── exports/
 ├── README.md
 ├── CONTRIBUTING.md
@@ -86,6 +93,7 @@ Open `http://localhost:8000/frontend/`.
 
 - Dataset Explorer: `http://localhost:8000/frontend/dashboard.html`
 - Benchmark Leaderboard: `http://localhost:8000/frontend/leaderboard.html`
+- Buyer Dataset Center: `http://localhost:8000/frontend/releases.html`
 
 ### Validate and export
 
@@ -101,6 +109,12 @@ npm run export
 npm test
 ```
 
+## PostgreSQL adapter
+
+JSONL remains the local-first default. A PostgreSQL adapter is now available for production integration. Configure `DATABASE_URL` and initialize `backend/schema.sql` against the target database. See `docs/DATABASE.md` for the migration and security plan.
+
+The adapter is deliberately separated from the HTTP layer so the application can migrate storage without changing its evaluation contract. The current API does not silently switch existing installations to PostgreSQL.
+
 ## Reviewer API
 
 | Method | Endpoint | Purpose |
@@ -109,16 +123,9 @@ npm test
 | POST | `/api/reviews` | Submit one reviewer judgment |
 | GET | `/api/reviews/consensus/:evaluationId` | Calculate consensus for an evaluation |
 | GET | `/api/reviewers/stats` | Reviewer workload and scoring statistics |
+| GET | `/api/release` | Buyer-facing release metadata |
 
 A reviewer submission contains a reviewer ID, evaluation ID, A/B/Tie preference, eight quality scores, rationale, and confidence. A reviewer cannot submit two reviews for the same evaluation.
-
-Consensus currently uses majority preference and an agreement score. Two or more reviewers make an evaluation eligible for consensus; agreement below two-thirds is flagged for additional review. This is a transparent MVP policy, not a claim of statistical reliability for production research.
-
-## Leaderboard methodology
-
-The benchmark leaderboard is a descriptive analytics layer. Reviewers are currently ranked by average stored quality score, with review count as a secondary ordering signal. Review coverage is reviews divided by evaluations and may exceed one when evaluations have multiple reviews. Tie rate is reported for context and is not, by itself, a quality ranking signal.
-
-The leaderboard should not be treated as a production reviewer-ranking system until gold-task calibration, agreement-adjusted scoring, confidence intervals, reviewer eligibility rules, and anti-gaming controls are implemented.
 
 ## Dataset philosophy
 
@@ -145,11 +152,12 @@ Reviewer IDs should be pseudonymous identifiers. Do not store names, emails, cre
 - [x] Storage abstraction and production SQL blueprint
 - [x] Dataset Explorer dashboard
 - [x] Benchmark leaderboard
-- [ ] Database adapter
+- [x] Buyer dataset download center
+- [x] PostgreSQL adapter foundation
+- [ ] Full database-backed API cutover
 - [ ] Reviewer authentication
 - [ ] Full inter-rater agreement statistics
 - [ ] Reviewer quality scoring against hidden gold tasks
-- [ ] Buyer dataset download center
 - [ ] Production deployment
 
 ## Status
