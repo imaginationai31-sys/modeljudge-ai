@@ -1,6 +1,6 @@
 {
   "name": "modeljudge-ai-api",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "Local-first API and dataset engine for ModelJudge AI human preference evaluations",
   "main": "server.js",
