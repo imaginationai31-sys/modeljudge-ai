@@ -57,8 +57,15 @@ document.querySelectorAll(".copy").forEach(button => {
 
 function setNotice(message, type = "success") {
   const notice = document.getElementById("notice");
+  if (!notice) return;
   notice.textContent = message;
   notice.dataset.type = type;
+}
+
+function updateEvaluationCounter(delta = 0) {
+  const counter = document.getElementById("totalEvaluations");
+  if (!counter) return;
+  counter.textContent = String(Number(counter.textContent || 0) + delta);
 }
 
 async function loadStats() {
@@ -66,7 +73,8 @@ async function loadStats() {
     const response = await fetch(`${API_URL}/evaluations?limit=1`);
     if (!response.ok) return;
     const data = await response.json();
-    document.getElementById("totalEvaluations").textContent = String(data.count ?? 0);
+    const counter = document.getElementById("totalEvaluations");
+    if (counter) counter.textContent = String(data.count ?? 0);
   } catch {
     // The static frontend remains usable when the API is offline.
   }
@@ -117,7 +125,7 @@ async function submitEvaluation() {
     if (!response.ok) throw new Error(data.errors?.join("; ") || data.error || "Unable to save evaluation");
 
     setNotice("Evaluation saved to the ModelJudge dataset.", "success");
-    document.getElementById("totalEvaluations").textContent = String(Number(document.getElementById("totalEvaluations").textContent || 0) + 1);
+    updateEvaluationCounter(1);
     document.getElementById("reason").value = "";
     document.getElementById("charCount").textContent = "0 / 500";
     document.querySelectorAll(".choice").forEach(b => b.classList.remove("active"));
