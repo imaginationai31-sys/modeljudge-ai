@@ -3,11 +3,13 @@
 // Override window.MODELJUDGE_API_URL before this file loads if needed.
 window.MODELJUDGE_API_URL = window.MODELJUDGE_API_URL || "/api";
 
-// Dashboard-only buyer release control. The download itself remains protected by
-// the buyer API key and dataset:read scope; no key is embedded in the frontend.
+// Dashboard-only buyer release controls. Buyer credentials are never embedded
+// in the frontend; dataset downloads remain protected by dataset:read scope.
 if (/\/dashboard(?:\.html)?$/i.test(window.location.pathname)) {
-  const script = document.createElement("script");
-  script.src = "release-download.js?v=20260908";
-  script.defer = true;
-  document.head.appendChild(script);
+  ["release-download.js?v=20260908", "release-quality.js?v=20260908"].forEach((src) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.defer = true;
+    document.head.appendChild(script);
+  });
 }
