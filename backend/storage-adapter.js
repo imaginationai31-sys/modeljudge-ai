@@ -37,6 +37,16 @@ async function insertEvaluation(record) {
   return record;
 }
 
+async function markEvaluationVerified(id, verified = true) {
+  if (mode() === "postgres") return pgStore.markEvaluationVerified(id, verified);
+  const records = await evaluationsJsonl.read();
+  const index = records.findIndex(r => r.id === id);
+  if (index === -1) return null;
+  records[index] = { ...records[index], verified };
+  await fs.writeFile(evaluationsJsonl.file, records.map(r => JSON.stringify(r)).join("\n") + (records.length ? "\n" : ""), "utf8");
+  return records[index];
+}
+
 async function listReviews(evaluationId) {
   if (mode() === "postgres") return pgStore.listReviews(evaluationId);
   const reviews = await reviewsJsonl.read();
@@ -57,4 +67,4 @@ async function reviewerStatsRows() {
   return null;
 }
 
-module.exports = { mode, listEvaluations, countEvaluations, findEvaluation, evaluationFingerprintExists, insertEvaluation, listReviews, insertReview, reviewerStatsRows };
+module.exports = { mode, listEvaluations, countEvaluations, findEvaluation, evaluationFingerprintExists, insertEvaluation, markEvaluationVerified, listReviews, insertReview, reviewerStatsRows };
