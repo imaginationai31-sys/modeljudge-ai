@@ -6,7 +6,26 @@ const db = require("./db");
 const DEFAULT_GOLD_FILE = path.join(__dirname, "..", "data", "gold", "gold-evaluations.jsonl");
 let calibrationSchemaReady = false;
 
-function goldFile() { return process.env.GOLD_TASKS_FILE || DEFAULT_GOLD_FILE; }
+function goldFile() {
+  const configured = process.env.GOLD_TASKS_FILE;
+  return configured || DEFAULT_GOLD_FILE;
+}
+
+async function loadGoldTasks() {
+  const configured = process.env.GOLD_TASKS_FILE;
+  const candidate = goldFile();
+  try {
+    const text = await fs.readFile(candidate, "utf8");
+    return text.split("\n").filter(Boolean).map(JSON.parse);
+  } catch (error) {
+    if (error.code === "ENOENT" && configured) {
+      console.warn(`[calibration] GOLD_TASKS_FILE not found: ${candidate}; falling back to repository gold dataset`);
+      const text = await fs.readFile(DEFAULT_GOLD_FILE, "utf8");
+      return text.split("\n").filter(Boolean).map(JSON.parse);
+    }
+    throw error;
+  }
+}
 
 async function ensureCalibrationSchema() {
   if (!db.isConfigured() || calibrationSchemaReady) return;
@@ -29,11 +48,6 @@ async function ensureCalibrationSchema() {
   calibrationSchemaReady = true;
 }
 
-async function loadGoldTasks() {
-  const text = await fs.readFile(goldFile(), "utf8");
-  return text.split("\n").filter(Boolean).map(JSON.parse);
-}
-
 function publicTask(task) { return { gold_evaluation_id: task.gold_evaluation_id, prompt: task.prompt, response_a: task.response_a, response_b: task.response_b }; }
 
 function pickTask(tasks, reviewerId, excludedIds = []) {
@@ -54,16 +68,9 @@ async function reviewerAttemptIds(reviewerId) {
 }
 
 async function getTask(reviewerId) {
-  try {
-    const tasks = await loadGoldTasks();
-    const attemptedIds = await reviewerAttemptIds(reviewerId);
-    const task = pickTask(tasks, reviewerId, attemptedIds);
-    console.log(`[calibration] getTask reviewer=${reviewerId || "unknown"} tasks=${tasks.length} attempted=${attemptedIds.length} selected=${task?.gold_evaluation_id || "none"}`);
-    return task ? publicTask(task) : null;
-  } catch (error) {
-    console.error(`[calibration] getTask failed reviewer=${reviewerId || "unknown"}: ${error.stack || error.message}`);
-    throw error;
-  }
+  const tasks = await loadGoldTasks();
+  const task = pickTask(tasks, reviewerId, await reviewerAttemptIds(reviewerId));
+  return task ? publicTask(task) : null;
 }
 
 function validateSubmission(body) {
