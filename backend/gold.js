@@ -54,9 +54,16 @@ async function reviewerAttemptIds(reviewerId) {
 }
 
 async function getTask(reviewerId) {
-  const tasks = await loadGoldTasks();
-  const task = pickTask(tasks, reviewerId, await reviewerAttemptIds(reviewerId));
-  return task ? publicTask(task) : null;
+  try {
+    const tasks = await loadGoldTasks();
+    const attemptedIds = await reviewerAttemptIds(reviewerId);
+    const task = pickTask(tasks, reviewerId, attemptedIds);
+    console.log(`[calibration] getTask reviewer=${reviewerId || "unknown"} tasks=${tasks.length} attempted=${attemptedIds.length} selected=${task?.gold_evaluation_id || "none"}`);
+    return task ? publicTask(task) : null;
+  } catch (error) {
+    console.error(`[calibration] getTask failed reviewer=${reviewerId || "unknown"}: ${error.stack || error.message}`);
+    throw error;
+  }
 }
 
 function validateSubmission(body) {
