@@ -32,6 +32,11 @@ async function evaluationFingerprintExists(fingerprint) {
   return (await evaluationsJsonl.read()).some(r => r.fingerprint === fingerprint);
 }
 
+async function reviewFingerprintExists(fingerprint) {
+  if (mode() === "postgres") return pgStore.reviewFingerprintExists(fingerprint);
+  return (await reviewsJsonl.read()).some(r => r.fingerprint === fingerprint);
+}
+
 async function insertEvaluation(record) {
   if (mode() === "postgres") return pgStore.insertEvaluation(record);
   await evaluationsJsonl.append(record);
@@ -58,9 +63,7 @@ async function insertReview(review) {
   if (mode() === "postgres") await pgStore.insertReview(review);
   else await reviewsJsonl.append(review);
 
-  // The current verification UI sends the selected action in the reviewer reason.
-  // Persist the final approval as the evaluation's verified state so the Dataset
-  // Explorer and verification queue reflect the submitted action.
+  // Persist an approved verification in the evaluation record.
   if (/^Reviewer approved:/i.test(String(review.reason || ""))) {
     await markEvaluationVerified(review.evaluation_id, true);
   }
@@ -75,4 +78,4 @@ async function reviewerStatsRows() {
   return null;
 }
 
-module.exports = { mode, listEvaluations, countEvaluations, findEvaluation, evaluationFingerprintExists, insertEvaluation, markEvaluationVerified, listReviews, insertReview, reviewerStatsRows };
+module.exports = { mode, listEvaluations, countEvaluations, findEvaluation, evaluationFingerprintExists, reviewFingerprintExists, insertEvaluation, markEvaluationVerified, listReviews, insertReview, reviewerStatsRows };
