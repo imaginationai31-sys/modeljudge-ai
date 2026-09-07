@@ -26,12 +26,31 @@ async function sha256(text) {
   return crypto.createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+async function writeReviewerQualityReport(destination, version, generatedAt) {
+  const reviewerQuality = {
+    release_version: `v${version}`,
+    generated_at: generatedAt,
+    reviewers: (await store.reviewerStatsRows()) || [],
+    note: "Reviewer statistics are derived from persisted review records."
+  };
+  const content = JSON.stringify(reviewerQuality, null, 2) + "\n";
+  await fs.writeFile(path.join(destination, "reviewer-quality-report.json"), content, "utf8");
+  return reviewerQuality;
+}
+
 async function ensureBuyerRelease(version = "0.9.1") {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Invalid release version");
   const destination = path.join(RELEASES_DIR, `v${version}`);
   const datasetPath = path.join(destination, "evaluations.jsonl");
   try {
     await fs.access(datasetPath);
+    try {
+      await fs.access(path.join(destination, "reviewer-quality-report.json"));
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      await writeReviewerQualityReport(destination, version, new Date().toISOString());
+      return { created: false, repaired: true, path: destination };
+    }
     return { created: false, path: destination };
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
@@ -63,12 +82,7 @@ async function ensureBuyerRelease(version = "0.9.1") {
     score_scale: "1-5",
     source: store.mode()
   };
-  const reviewerQuality = {
-    release_version: `v${version}`,
-    generated_at: generatedAt,
-    reviewers: (await store.reviewerStatsRows()) || [],
-    note: "Reviewer statistics are derived from persisted review records."
-  };
+  await writeReviewerQualityReport(destination, version, generatedAt);
   const pipelineManifest = {
     dataset_name: "ModelJudge AI Human Preference Evaluations",
     version: `v${version}`,
@@ -97,7 +111,6 @@ async function ensureBuyerRelease(version = "0.9.1") {
 
   await fs.writeFile(path.join(destination, "manifest.json"), JSON.stringify(pipelineManifest, null, 2) + "\n", "utf8");
   await fs.writeFile(path.join(destination, "quality-report.json"), JSON.stringify(quality, null, 2) + "\n", "utf8");
-  await fs.writeFile(path.join(destination, "reviewer-quality.json"), JSON.stringify(reviewerQuality, null, 2) + "\n", "utf8");
   await fs.writeFile(path.join(destination, "RELEASE-MANIFEST.json"), JSON.stringify(manifest, null, 2) + "\n", "utf8");
   await fs.writeFile(path.join(destination, "BUYER-README.md"), `# ModelJudge AI v${version}\n\nImmutable buyer dataset release generated from the persisted evaluation store.\n\nVerify SHA-256 checksums in RELEASE-MANIFEST.json before redistribution.\n`, "utf8");
   await fs.writeFile(path.join(RELEASES_DIR, "LATEST.json"), JSON.stringify({ release_version: `v${version}`, release_path: `releases/v${version}`, generated_at: generatedAt, immutable: true }, null, 2) + "\n", "utf8");
