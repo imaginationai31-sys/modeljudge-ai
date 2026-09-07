@@ -89,7 +89,7 @@ async function submit({ reviewerId, goldEvaluationId, preferredResponse }) {
   const record = { id: `CAL-${crypto.randomUUID()}`, reviewer_id: reviewerId, gold_evaluation_id: goldEvaluationId, submitted_preference: preferredResponse, expected_preference: task.preferred_response, is_correct: correct, created_at: new Date().toISOString() };
   if (db.isConfigured()) {
     await ensureCalibrationSchema();
-    await db.query("INSERT INTO calibration_attempts (id,reviewer_id,gold_evaluation_id,submitted_preference,expected_preference,is_correct,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)", [record.id, record.reviewer_id, record.gold_evaluation_id, record.submitted_preference, record.expected_preference, record.is_correct, record.created_at]);
+    await db.query("INSERT INTO calibration_attempts (id,reviewer_id,gold_evaluation_id,submitted_preference,expected_preference,preferred_response,is_correct,created_at) VALUES ($1,$2,$3,$4,$5,$5,$6,$7,$8)", [record.id, record.reviewer_id, record.gold_evaluation_id, record.submitted_preference, record.expected_preference, record.is_correct, record.created_at]);
   } else await fs.appendFile(path.join(__dirname, "..", "data", "calibration-attempts.jsonl"), JSON.stringify(record) + "\n", "utf8");
   return { id: record.id, correct, gold_evaluation_id: goldEvaluationId };
 }
