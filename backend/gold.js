@@ -42,6 +42,7 @@ async function ensureCalibrationSchema() {
   await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS gold_evaluation_id TEXT`);
   await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS submitted_preference TEXT`);
   await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS expected_preference TEXT`);
+  await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS preferred_response TEXT`);
   await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS is_correct BOOLEAN`);
   await db.query(`ALTER TABLE calibration_attempts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP`);
   await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS calibration_attempts_reviewer_task_idx ON calibration_attempts (reviewer_id, gold_evaluation_id)`);
@@ -86,10 +87,10 @@ async function submit({ reviewerId, goldEvaluationId, preferredResponse }) {
   if (!task) return { error: "Gold task not found", status: 404 };
   if ((await reviewerAttemptIds(reviewerId)).includes(goldEvaluationId)) return { error: "Calibration task already attempted", status: 409 };
   const correct = task.preferred_response === preferredResponse;
-  const record = { id: `CAL-${crypto.randomUUID()}`, reviewer_id: reviewerId, gold_evaluation_id: goldEvaluationId, submitted_preference: preferredResponse, expected_preference: task.preferred_response, is_correct: correct, created_at: new Date().toISOString() };
+  const record = { id: `CAL-${crypto.randomUUID()}`, reviewer_id: reviewerId, gold_evaluation_id: goldEvaluationId, submitted_preference: preferredResponse, expected_preference: task.preferred_response, preferred_response: task.preferred_response, is_correct: correct, created_at: new Date().toISOString() };
   if (db.isConfigured()) {
     await ensureCalibrationSchema();
-    await db.query("INSERT INTO calibration_attempts (id,reviewer_id,gold_evaluation_id,submitted_preference,expected_preference,preferred_response,is_correct,created_at) VALUES ($1,$2,$3,$4,$5,$5,$6,$7,$8)", [record.id, record.reviewer_id, record.gold_evaluation_id, record.submitted_preference, record.expected_preference, record.is_correct, record.created_at]);
+    await db.query("INSERT INTO calibration_attempts (id,reviewer_id,gold_evaluation_id,submitted_preference,expected_preference,preferred_response,is_correct,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", [record.id, record.reviewer_id, record.gold_evaluation_id, record.submitted_preference, record.expected_preference, record.preferred_response, record.is_correct, record.created_at]);
   } else await fs.appendFile(path.join(__dirname, "..", "data", "calibration-attempts.jsonl"), JSON.stringify(record) + "\n", "utf8");
   return { id: record.id, correct, gold_evaluation_id: goldEvaluationId };
 }
