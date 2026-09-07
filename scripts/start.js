@@ -25,6 +25,23 @@ function runMigrations() {
   if (result.status !== 0) process.exit(result.status || 1);
 }
 
+function runCalibrationDiagnostic() {
+  if (!db.isConfigured()) return;
+  console.log("Running calibration diagnostic against PostgreSQL...");
+  const result = spawnSync(
+    process.execPath,
+    [path.join(__dirname, "diagnose-calibration.js")],
+    { stdio: "inherit", env: process.env }
+  );
+  if (result.error) {
+    console.error("Calibration diagnostic failed to start:", result.error.message);
+    return;
+  }
+  if (result.status !== 0) {
+    console.error(`Calibration diagnostic reported failures (exit ${result.status}). API startup will continue so Render logs can be inspected.`);
+  }
+}
+
 function proxyApi(req, res) {
   const headers = { ...req.headers, host: `127.0.0.1:${BACKEND_PORT}` };
   const options = {
@@ -50,6 +67,7 @@ function proxyApi(req, res) {
 }
 
 runMigrations();
+runCalibrationDiagnostic();
 console.log(`Starting ModelJudge AI API internally on port ${BACKEND_PORT}...`);
 
 const backendEnv = { ...process.env, PORT: String(BACKEND_PORT) };
