@@ -26,7 +26,7 @@ async function fingerprintExists(fingerprint) {
 }
 
 async function insertReview(review) {
-  await db.query(`INSERT INTO reviews (id,evaluation_id,reviewer_id,preferred_response,accuracy_a,accuracy_b,relevance_a,relevance_b,clarity_a,clarity_b,safety_a,safety_b,reason,confidence,fingerprint,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`, [review.id,review.evaluation_id,review.reviewer_id,review.preferred_response,review.accuracy_a,review.accuracy_b,review.relevance_a,review.relevance_b,review.clarity_a,review.clarity_b,review.safety_a,review.safety_b,review.reason,review.confidence,review.fingerprint,review.created_at]);
+  await db.query(`INSERT INTO reviews (id,evaluation_id,reviewer_id,preferred_response,accuracy_a,accuracy_b,relevance_a,relevance_b,clarity_a,clarity_b,safety_a,safety_b,reason,confidence,fingerprint,created_at,verification_action) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`, [review.id,review.evaluation_id,review.reviewer_id,review.preferred_response,review.accuracy_a,review.accuracy_b,review.relevance_a,review.relevance_b,review.clarity_a,review.clarity_b,review.safety_a,review.safety_b,review.reason,review.confidence,review.fingerprint,review.created_at,review.verification_action || "pending"]);
   return review;
 }
 
