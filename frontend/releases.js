@@ -65,6 +65,8 @@ async function openProtectedRelease(event) {
         try {
           sessionStorage.removeItem("modeljudge_buyer_api_key");
           localStorage.removeItem("modeljudge_buyer_api_key");
+          sessionStorage.removeItem("modeljudge_buyer_key");
+          localStorage.removeItem("modeljudge_buyer_key");
         } catch {}
         setNotice(`${message}. Your buyer key may be invalid, revoked, or missing dataset:read scope.`, "error");
         return;
