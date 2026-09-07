@@ -6,7 +6,7 @@ async function insertEvaluation(record) {
 }
 
 async function listEvaluations(limit = 500) {
-  const result = await db.query("SELECT * FROM evaluations ORDER BY created_at DESC LIMIT $1", [limit]);
+  const result = await db.query(`SELECT e.*, CASE WHEN e.verified = TRUE OR EXISTS (SELECT 1 FROM reviews r WHERE r.evaluation_id = e.id AND (LOWER(COALESCE(r.verification_action,'')) = 'approved' OR LOWER(COALESCE(r.reason,'')) LIKE 'reviewer approved:%')) THEN TRUE ELSE FALSE END AS verified FROM evaluations e ORDER BY e.created_at DESC LIMIT $1`, [limit]);
   return result.rows;
 }
 
