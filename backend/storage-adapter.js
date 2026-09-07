@@ -59,14 +59,24 @@ async function listReviews(evaluationId) {
   return evaluationId ? reviews.filter(r => r.evaluation_id === evaluationId) : reviews.slice(-500).reverse();
 }
 
-async function insertReview(review) {
-  if (mode() === "postgres") await pgStore.insertReview(review);
-  else await reviewsJsonl.append(review);
+function resolveVerificationAction(review) {
+  if (review.verification_action === "approved" || review.verification_action === "revision requested" || review.verification_action === "rejected") return review.verification_action;
+  const reason = String(review.reason || "").toLowerCase();
+  if (reason.startsWith("reviewer approved:")) return "approved";
+  if (reason.startsWith("reviewer revision requested:")) return "revision requested";
+  if (reason.startsWith("reviewer rejected:")) return "rejected";
+  return "pending";
+}
 
-  if (review.verification_action === "approved") {
-    await markEvaluationVerified(review.evaluation_id, true);
+async function insertReview(review) {
+  const persistedReview = { ...review, verification_action: resolveVerificationAction(review) };
+  if (mode() === "postgres") await pgStore.insertReview(persistedReview);
+  else await reviewsJsonl.append(persistedReview);
+
+  if (persistedReview.verification_action === "approved") {
+    await markEvaluationVerified(persistedReview.evaluation_id, true);
   }
-  return review;
+  return persistedReview;
 }
 
 async function reviewerStatsRows() {
