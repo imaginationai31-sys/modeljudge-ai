@@ -63,8 +63,7 @@ async function insertReview(review) {
   if (mode() === "postgres") await pgStore.insertReview(review);
   else await reviewsJsonl.append(review);
 
-  // Persist an approved verification in the evaluation record.
-  if (/^Reviewer approved:/i.test(String(review.reason || ""))) {
+  if (review.verification_action === "approved") {
     await markEvaluationVerified(review.evaluation_id, true);
   }
   return review;
