@@ -3,8 +3,14 @@ const db = require("./db");
 
 function requireDb(){if(!db.isConfigured())throw new Error("Buyer management requires PostgreSQL");}
 
-async function createBuyer({buyerId,companyName,contactEmail,notes}){
+async function createBuyer({buyerId,companyName,contactEmail,notes,buyer_id,company_name,contact_email}){
   requireDb();
+  // Accept both the internal camelCase names and the public API's snake_case names.
+  buyerId = buyerId || buyer_id;
+  companyName = companyName || company_name;
+  contactEmail = contactEmail ?? contact_email;
+  if(!buyerId)throw new Error("buyer_id is required");
+  if(!companyName)throw new Error("company_name is required");
   const result=await db.query(`INSERT INTO buyer_accounts (buyer_id,company_name,contact_email,notes) VALUES ($1,$2,$3,$4) RETURNING *`,[buyerId,companyName,contactEmail||null,notes||null]);
   return result.rows[0];
 }
