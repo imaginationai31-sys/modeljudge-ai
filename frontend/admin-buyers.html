@@ -1,1 +1,75 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ModelJudge AI — Admin Buyers</title><link rel="stylesheet" href="styles.css"><style>main{max-width:1100px;margin:auto;padding:40px 24px}.card{border:1px solid var(--border);border-radius:16px;padding:20px;margin:14px 0;background:var(--card)}input{padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:inherit}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--border)}.muted{color:var(--muted)}</style></head><body><main><p class="eyebrow">ADMIN</p><h1>Buyer Management</h1><p class="muted">Administrative buyer controls. Keep this page behind your production admin authentication and do not publish it as a public portal.</p><div class="card"><label>Admin session bearer token <input id="token" type="password" placeholder="Bearer token"></label> <button class="button primary" id="load">Load buyers</button><div id="status" class="status">Not connected</div></div><div class="card"><h2>Buyers</h2><div id="buyers">No data.</div></div></main><script>const t=document.getElementById('token'),s=document.getElementById('status'),b=document.getElementById('buyers');async function load(){try{const r=await fetch('/api/admin/buyers',{headers:{Authorization:'Bearer '+t.value}}),d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');b.innerHTML='<table><tr><th>Buyer</th><th>Company</th><th>Status</th><th>Keys</th><th>Active keys</th></tr>'+d.buyers.map(x=>`<tr><td>${x.buyer_id}</td><td>${x.company_name}</td><td>${x.status}</td><td>${x.api_key_count}</td><td>${x.active_api_key_count}</td></tr>`).join('')+'</table>';s.textContent='Loaded';}catch(e){s.textContent=e.message;s.className='status danger';}}document.getElementById('load').onclick=load;</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ModelJudge AI — Buyer Management</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{border:1px solid var(--border);border-radius:16px;padding:20px;margin:14px 0;background:var(--card)}label{display:block;font-weight:600;margin:10px 0 6px}input,select,textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:inherit}textarea{min-height:80px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--border);vertical-align:top}.muted{color:var(--muted)}.secret{font-family:monospace;word-break:break-all;padding:12px;border-radius:10px;background:var(--bg);border:1px dashed var(--border)}.danger{color:#c0392b}.success{color:#16794c}.hidden{display:none}.scroll{overflow:auto}.small{font-size:.88rem}
+</style>
+</head>
+<body>
+<main>
+<p class="eyebrow">ADMIN</p>
+<h1>Buyer Management</h1>
+<p class="muted">Create and manage dataset buyers. This page must remain protected by production admin authentication.</p>
+
+<div class="card">
+<h2>Admin authentication</h2>
+<label for="token">Admin session bearer token</label>
+<input id="token" type="password" autocomplete="off" placeholder="Paste your admin session token">
+<div class="actions"><button class="button primary" id="load" type="button">Load buyers</button></div>
+<div id="status" class="status">Not connected</div>
+</div>
+
+<div class="grid">
+<section class="card">
+<h2>Create Buyer</h2>
+<label for="buyerId">Buyer ID</label><input id="buyerId" placeholder="test-buyer-01">
+<label for="company">Company Name</label><input id="company" placeholder="ModelJudge Test Buyer">
+<label for="email">Contact Email</label><input id="email" type="email" placeholder="test@example.com">
+<label for="notes">Notes</label><textarea id="notes" placeholder="API authentication test buyer"></textarea>
+<div class="actions"><button class="button primary" id="createBuyer" type="button">Create Buyer</button></div>
+</section>
+
+<section class="card">
+<h2>Create API Key</h2>
+<p class="muted small">Select a buyer first. The secret is shown only when the key is created.</p>
+<label for="buyerSelect">Buyer</label><select id="buyerSelect"><option value="">Load buyers first</option></select>
+<label for="keyName">Key Name</label><input id="keyName" value="Test Dataset API Key">
+<label for="dailyLimit">Daily Limit</label><input id="dailyLimit" type="number" min="1" value="1000">
+<label>Scope</label><input value="dataset:read" disabled>
+<div class="actions"><button class="button primary" id="createKey" type="button">Create API Key</button></div>
+<div id="secretBox" class="hidden"></div>
+</section>
+</div>
+
+<section class="card">
+<div class="actions" style="justify-content:space-between;align-items:center"><div><h2 style="margin:0">Buyers</h2><p class="muted small" style="margin-bottom:0">Select a buyer to view keys and usage.</p></div><button class="button secondary" id="refresh" type="button">Refresh</button></div>
+<div class="scroll" id="buyers">No data.</div>
+</section>
+
+<section class="card" id="detailsCard">
+<h2>Buyer Details</h2>
+<div id="details" class="muted">Select a buyer.</div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const token=$('token'),status=$('status'),buyers=$('buyers'),buyerSelect=$('buyerSelect'),details=$('details'),secretBox=$('secretBox');
+let buyerRows=[];
+function headers(){return {'Content-Type':'application/json','Authorization':'Bearer '+token.value.trim()};}
+async function request(url,options={}){const r=await fetch(url,{...options,headers:{...headers(),...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Request failed ('+r.status+')');return d;}
+function setStatus(text,ok=false){status.textContent=text;status.className='status '+(ok?'success':'');}
+function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+async function load(){
+ try{const d=await request('/api/admin/buyers');buyerRows=d.buyers||[];buyerSelect.innerHTML='<option value="">Select buyer</option>'+buyerRows.map(x=>`<option value="${escapeHtml(x.buyer_id)}">${escapeHtml(x.buyer_id)} — ${escapeHtml(x.company_name)}</option>`).join('');buyers.innerHTML=buyerRows.length?'<table><tr><th>Buyer</th><th>Company</th><th>Status</th><th>Keys</th><th>Active</th><th>Action</th></tr>'+buyerRows.map(x=>`<tr><td>${escapeHtml(x.buyer_id)}</td><td>${escapeHtml(x.company_name)}</td><td>${escapeHtml(x.status)}</td><td>${x.api_key_count}</td><td>${x.active_api_key_count}</td><td><button class="button secondary" type="button" onclick="selectBuyer('${encodeURIComponent(x.buyer_id)}')">Manage</button></td></tr>`).join('')+'</table>':'No buyers yet.';setStatus('Loaded '+buyerRows.length+' buyer(s)',true);if(buyerSelect.value) await loadDetails(buyerSelect.value);}catch(e){setStatus(e.message);}}
+async function createBuyer(){try{const buyer_id=$('buyerId').value.trim(),company_name=$('company').value.trim();if(!buyer_id||!company_name)return setStatus('Buyer ID and Company Name are required');await request('/api/admin/buyers',{method:'POST',body:JSON.stringify({buyer_id,company_name,contact_email:$('email').value.trim()||null,notes:$('notes').value.trim()||null})});setStatus('Buyer created',true);await load();buyerSelect.value=buyer_id;await loadDetails(buyer_id);}catch(e){setStatus(e.message);}}
+async function createKey(){try{const buyerId=buyerSelect.value;if(!buyerId)return setStatus('Select a buyer first');const d=await request('/api/admin/buyers/'+encodeURIComponent(buyerId)+'/keys',{method:'POST',body:JSON.stringify({name:$('keyName').value.trim()||'Dataset access',scopes:['dataset:read'],daily_limit:Number($('dailyLimit').value)||1000})});secretBox.className='';secretBox.innerHTML='<p class="success"><strong>API key created.</strong> Copy it now. The full secret is not stored in this page.</p><div class="secret">'+escapeHtml(d.api_key||'')+'</div>';setStatus('API key created',true);await loadDetails(buyerId);await load();buyerSelect.value=buyerId;}catch(e){setStatus(e.message);}}
+async function loadDetails(buyerId){try{const d=await request('/api/admin/buyers/'+encodeURIComponent(buyerId));const keys=d.keys||[],u=d.usage||{};details.innerHTML='<p><strong>Buyer:</strong> '+escapeHtml(d.buyer.buyer_id)+'</p><p><strong>Company:</strong> '+escapeHtml(d.buyer.company_name)+'</p><p><strong>Status:</strong> '+escapeHtml(d.buyer.status)+'</p><div class="actions"><button class="button secondary" type="button" onclick="setBuyerStatus(\''+encodeURIComponent(buyerId)+'\',\'active\')">Activate</button><button class="button secondary" type="button" onclick="setBuyerStatus(\''+encodeURIComponent(buyerId)+'\',\'suspended\')">Suspend</button></div><h3>API Keys</h3>'+(keys.length?'<div class="scroll"><table><tr><th>Name</th><th>Prefix</th><th>Scope</th><th>Status</th><th>Last used</th></tr>'+keys.map(k=>`<tr><td>${escapeHtml(k.name)}</td><td>${escapeHtml(k.key_prefix)}…</td><td>${escapeHtml((k.scopes||[]).join(', '))}</td><td>${k.revoked_at?'Revoked':'Active'}</td><td>${escapeHtml(k.last_used_at||'Never')}</td></tr>`).join('')+'</table></div>':'No API keys yet.')+'<h3>Usage</h3><p>Total downloads: <strong>'+Number(u.total_downloads||0)+'</strong> · Records downloaded: <strong>'+Number(u.records_downloaded||0)+'</strong> · Versions: <strong>'+Number(u.versions_downloaded||0)+'</strong></p>';}catch(e){details.innerHTML='<span class="danger">'+escapeHtml(e.message)+'</span>';}}
+async function setBuyerStatus(encoded,statusValue){try{const buyerId=decodeURIComponent(encoded);await request('/api/admin/buyers/'+encodeURIComponent(buyerId)+'/status',{method:'POST',body:JSON.stringify({status:statusValue})});setStatus('Buyer status updated',true);await load();buyerSelect.value=buyerId;await loadDetails(buyerId);}catch(e){setStatus(e.message);}}
+window.selectBuyer=async encoded=>{const id=decodeURIComponent(encoded);buyerSelect.value=id;await loadDetails(id);};
+buyerSelect.onchange=()=>buyerSelect.value&&loadDetails(buyerSelect.value);
+$('load').onclick=load;$('refresh').onclick=load;$('createBuyer').onclick=createBuyer;$('createKey').onclick=createKey;
+</script>
+</body></html>
