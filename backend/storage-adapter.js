@@ -55,8 +55,15 @@ async function listReviews(evaluationId) {
 }
 
 async function insertReview(review) {
-  if (mode() === "postgres") return pgStore.insertReview(review);
-  await reviewsJsonl.append(review);
+  if (mode() === "postgres") await pgStore.insertReview(review);
+  else await reviewsJsonl.append(review);
+
+  // The current verification UI sends the selected action in the reviewer reason.
+  // Persist the final approval as the evaluation's verified state so the Dataset
+  // Explorer and verification queue reflect the submitted action.
+  if (/^Reviewer approved:/i.test(String(review.reason || ""))) {
+    await markEvaluationVerified(review.evaluation_id, true);
+  }
   return review;
 }
 
