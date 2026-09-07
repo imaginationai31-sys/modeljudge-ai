@@ -5,7 +5,7 @@
 <title>ModelJudge AI — Buyer Management</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{border:1px solid var(--border);border-radius:16px;padding:20px;margin:14px 0;background:var(--card)}label{display:block;font-weight:600;margin:10px 0 6px}input,select,textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:inherit}textarea{min-height:80px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--border);vertical-align:top}.muted{color:var(--muted)}.secret{font-family:monospace;word-break:break-all;padding:12px;border-radius:10px;background:var(--bg);border:1px dashed var(--border)}.danger{color:#c0392b}.success{color:#16794c}.hidden{display:none}.scroll{overflow:auto}.small{font-size:.88rem}
+main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.card{border:1px solid var(--border);border-radius:16px;padding:20px;margin:14px 0;background:var(--card)}label{display:block;font-weight:600;margin:10px 0 6px}input,select,textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:inherit}textarea{min-height:80px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid var(--border);vertical-align:top}.muted{color:var(--muted)}.secret{font-family:monospace;word-break:break-all;padding:12px;border-radius:10px;background:var(--bg);border:1px dashed var(--border)}.danger{color:#c0392b}.success{color:#16794c}.hidden{display:none}.scroll{overflow:auto}.small{font-size:.88rem}.status{margin-top:10px}.status.error{color:#c0392b}.status.success{color:#16794c}.button:disabled{opacity:.55;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -18,7 +18,10 @@ main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-temp
 <h2>Admin authentication</h2>
 <label for="token">Admin session bearer token</label>
 <input id="token" type="password" autocomplete="off" placeholder="Paste your admin session token">
-<div class="actions"><button class="button primary" id="load" type="button">Load buyers</button></div>
+<div class="actions">
+<button class="button primary" id="connect" type="button">Connect &amp; Load</button>
+<button class="button secondary" id="load" type="button">Load buyers</button>
+</div>
 <div id="status" class="status">Not connected</div>
 </div>
 
@@ -29,7 +32,7 @@ main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-temp
 <label for="company">Company Name</label><input id="company" placeholder="ModelJudge Test Buyer">
 <label for="email">Contact Email</label><input id="email" type="email" placeholder="test@example.com">
 <label for="notes">Notes</label><textarea id="notes" placeholder="API authentication test buyer"></textarea>
-<div class="actions"><button class="button primary" id="createBuyer" type="button">Create Buyer</button></div>
+<div class="actions"><button class="button primary admin-action" id="createBuyer" type="button">Create Buyer</button></div>
 </section>
 
 <section class="card">
@@ -39,13 +42,13 @@ main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-temp
 <label for="keyName">Key Name</label><input id="keyName" value="Test Dataset API Key">
 <label for="dailyLimit">Daily Limit</label><input id="dailyLimit" type="number" min="1" value="1000">
 <label>Scope</label><input value="dataset:read" disabled>
-<div class="actions"><button class="button primary" id="createKey" type="button">Create API Key</button></div>
+<div class="actions"><button class="button primary admin-action" id="createKey" type="button">Create API Key</button></div>
 <div id="secretBox" class="hidden"></div>
 </section>
 </div>
 
 <section class="card">
-<div class="actions" style="justify-content:space-between;align-items:center"><div><h2 style="margin:0">Buyers</h2><p class="muted small" style="margin-bottom:0">Select a buyer to view keys and usage.</p></div><button class="button secondary" id="refresh" type="button">Refresh</button></div>
+<div class="actions" style="justify-content:space-between;align-items:center"><div><h2 style="margin:0">Buyers</h2><p class="muted small" style="margin-bottom:0">Select a buyer to view keys and usage.</p></div><button class="button secondary admin-action" id="refresh" type="button">Refresh</button></div>
 <div class="scroll" id="buyers">No data.</div>
 </section>
 
@@ -54,22 +57,116 @@ main{max-width:1150px;margin:auto;padding:32px 24px}.grid{display:grid;grid-temp
 <div id="details" class="muted">Select a buyer.</div>
 </section>
 </main>
+
+<script src="config.js?v=20260907"></script>
 <script>
 const $=id=>document.getElementById(id);
 const token=$('token'),status=$('status'),buyers=$('buyers'),buyerSelect=$('buyerSelect'),details=$('details'),secretBox=$('secretBox');
+const API_BASE=String(window.MODELJUDGE_API_URL||'/api').replace(/\/$/,'');
 let buyerRows=[];
+let selectedBuyer='';
+
+try{token.value=sessionStorage.getItem('modeljudge_admin_token')||'';}catch{}
+
+function setStatus(text,type=''){status.textContent=text;status.className='status '+type;}
+function hasToken(){return Boolean(token.value.trim());}
+function updateButtons(){document.querySelectorAll('.admin-action,#load').forEach(b=>b.disabled=!hasToken());}
 function headers(){return {'Content-Type':'application/json','Authorization':'Bearer '+token.value.trim()};}
-async function request(url,options={}){const r=await fetch(url,{...options,headers:{...headers(),...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Request failed ('+r.status+')');return d;}
-function setStatus(text,ok=false){status.textContent=text;status.className='status '+(ok?'success':'');}
+
+async function request(path,options={}){
+  if(!hasToken()) throw Error('Enter your admin session token first, then click Connect & Load.');
+  const url=API_BASE+(path.startsWith('/')?path:'/'+path);
+  let r;
+  try{r=await fetch(url,{...options,headers:{...headers(),...(options.headers||{})}});}
+  catch(e){throw Error('Cannot reach API at '+url+'. Check the Render deployment and API URL.');}
+  let d={};
+  try{d=await r.json();}catch{}
+  if(!r.ok){
+    if(r.status===401) throw Error('Admin authentication failed (401). Check your admin session token.');
+    if(r.status===403) throw Error('Admin access denied (403). Your token must have role=admin.');
+    throw Error(d.error||d.message||'Request failed ('+r.status+')');
+  }
+  return d;
+}
+
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+
+async function connect(){
+  if(!hasToken()) return setStatus('Paste your admin session token first.','error');
+  try{sessionStorage.setItem('modeljudge_admin_token',token.value.trim());}catch{}
+  await load();
+}
+
 async function load(){
- try{const d=await request('/api/admin/buyers');buyerRows=d.buyers||[];buyerSelect.innerHTML='<option value="">Select buyer</option>'+buyerRows.map(x=>`<option value="${escapeHtml(x.buyer_id)}">${escapeHtml(x.buyer_id)} — ${escapeHtml(x.company_name)}</option>`).join('');buyers.innerHTML=buyerRows.length?'<table><tr><th>Buyer</th><th>Company</th><th>Status</th><th>Keys</th><th>Active</th><th>Action</th></tr>'+buyerRows.map(x=>`<tr><td>${escapeHtml(x.buyer_id)}</td><td>${escapeHtml(x.company_name)}</td><td>${escapeHtml(x.status)}</td><td>${x.api_key_count}</td><td>${x.active_api_key_count}</td><td><button class="button secondary" type="button" onclick="selectBuyer('${encodeURIComponent(x.buyer_id)}')">Manage</button></td></tr>`).join('')+'</table>':'No buyers yet.';setStatus('Loaded '+buyerRows.length+' buyer(s)',true);if(buyerSelect.value) await loadDetails(buyerSelect.value);}catch(e){setStatus(e.message);}}
-async function createBuyer(){try{const buyer_id=$('buyerId').value.trim(),company_name=$('company').value.trim();if(!buyer_id||!company_name)return setStatus('Buyer ID and Company Name are required');await request('/api/admin/buyers',{method:'POST',body:JSON.stringify({buyer_id,company_name,contact_email:$('email').value.trim()||null,notes:$('notes').value.trim()||null})});setStatus('Buyer created',true);await load();buyerSelect.value=buyer_id;await loadDetails(buyer_id);}catch(e){setStatus(e.message);}}
-async function createKey(){try{const buyerId=buyerSelect.value;if(!buyerId)return setStatus('Select a buyer first');const d=await request('/api/admin/buyers/'+encodeURIComponent(buyerId)+'/keys',{method:'POST',body:JSON.stringify({name:$('keyName').value.trim()||'Dataset access',scopes:['dataset:read'],daily_limit:Number($('dailyLimit').value)||1000})});secretBox.className='';secretBox.innerHTML='<p class="success"><strong>API key created.</strong> Copy it now. The full secret is not stored in this page.</p><div class="secret">'+escapeHtml(d.api_key||'')+'</div>';setStatus('API key created',true);await loadDetails(buyerId);await load();buyerSelect.value=buyerId;}catch(e){setStatus(e.message);}}
-async function loadDetails(buyerId){try{const d=await request('/api/admin/buyers/'+encodeURIComponent(buyerId));const keys=d.keys||[],u=d.usage||{};details.innerHTML='<p><strong>Buyer:</strong> '+escapeHtml(d.buyer.buyer_id)+'</p><p><strong>Company:</strong> '+escapeHtml(d.buyer.company_name)+'</p><p><strong>Status:</strong> '+escapeHtml(d.buyer.status)+'</p><div class="actions"><button class="button secondary" type="button" onclick="setBuyerStatus(\''+encodeURIComponent(buyerId)+'\',\'active\')">Activate</button><button class="button secondary" type="button" onclick="setBuyerStatus(\''+encodeURIComponent(buyerId)+'\',\'suspended\')">Suspend</button></div><h3>API Keys</h3>'+(keys.length?'<div class="scroll"><table><tr><th>Name</th><th>Prefix</th><th>Scope</th><th>Status</th><th>Last used</th></tr>'+keys.map(k=>`<tr><td>${escapeHtml(k.name)}</td><td>${escapeHtml(k.key_prefix)}…</td><td>${escapeHtml((k.scopes||[]).join(', '))}</td><td>${k.revoked_at?'Revoked':'Active'}</td><td>${escapeHtml(k.last_used_at||'Never')}</td></tr>`).join('')+'</table></div>':'No API keys yet.')+'<h3>Usage</h3><p>Total downloads: <strong>'+Number(u.total_downloads||0)+'</strong> · Records downloaded: <strong>'+Number(u.records_downloaded||0)+'</strong> · Versions: <strong>'+Number(u.versions_downloaded||0)+'</strong></p>';}catch(e){details.innerHTML='<span class="danger">'+escapeHtml(e.message)+'</span>';}}
-async function setBuyerStatus(encoded,statusValue){try{const buyerId=decodeURIComponent(encoded);await request('/api/admin/buyers/'+encodeURIComponent(buyerId)+'/status',{method:'POST',body:JSON.stringify({status:statusValue})});setStatus('Buyer status updated',true);await load();buyerSelect.value=buyerId;await loadDetails(buyerId);}catch(e){setStatus(e.message);}}
-window.selectBuyer=async encoded=>{const id=decodeURIComponent(encoded);buyerSelect.value=id;await loadDetails(id);};
-buyerSelect.onchange=()=>buyerSelect.value&&loadDetails(buyerSelect.value);
-$('load').onclick=load;$('refresh').onclick=load;$('createBuyer').onclick=createBuyer;$('createKey').onclick=createKey;
+  const previous=selectedBuyer||buyerSelect.value;
+  try{
+    setStatus('Loading buyers…');
+    const d=await request('/admin/buyers');
+    buyerRows=d.buyers||[];
+    buyerSelect.innerHTML='<option value="">Select buyer</option>'+buyerRows.map(x=>`<option value="${escapeHtml(x.buyer_id)}">${escapeHtml(x.buyer_id)} — ${escapeHtml(x.company_name)}</option>`).join('');
+    if(previous && buyerRows.some(x=>x.buyer_id===previous)){selectedBuyer=previous;buyerSelect.value=previous;}
+    buyers.innerHTML=buyerRows.length?'<table><tr><th>Buyer</th><th>Company</th><th>Status</th><th>Keys</th><th>Active</th><th>Action</th></tr>'+buyerRows.map(x=>`<tr><td>${escapeHtml(x.buyer_id)}</td><td>${escapeHtml(x.company_name)}</td><td>${escapeHtml(x.status)}</td><td>${Number(x.api_key_count||0)}</td><td>${Number(x.active_api_key_count||0)}</td><td><button class="button secondary" type="button" data-buyer="${encodeURIComponent(x.buyer_id)}">Manage</button></td></tr>`).join('')+'</table>':'No buyers yet.';
+    buyers.querySelectorAll('[data-buyer]').forEach(b=>b.addEventListener('click',()=>selectBuyer(decodeURIComponent(b.dataset.buyer))));
+    setStatus('Loaded '+buyerRows.length+' buyer(s)','success');
+    if(selectedBuyer) await loadDetails(selectedBuyer);
+  }catch(e){setStatus(e.message,'error');}
+}
+
+async function createBuyer(){
+  try{
+    const buyer_id=$('buyerId').value.trim(),company_name=$('company').value.trim();
+    if(!buyer_id||!company_name)return setStatus('Buyer ID and Company Name are required.','error');
+    setStatus('Creating buyer…');
+    await request('/admin/buyers',{method:'POST',body:JSON.stringify({buyer_id,company_name,contact_email:$('email').value.trim()||null,notes:$('notes').value.trim()||null})});
+    selectedBuyer=buyer_id;
+    setStatus('Buyer created successfully.','success');
+    await load();
+    buyerSelect.value=buyer_id;
+    await loadDetails(buyer_id);
+  }catch(e){setStatus(e.message,'error');}
+}
+
+async function createKey(){
+  try{
+    const buyerId=buyerSelect.value;
+    if(!buyerId)return setStatus('Select a buyer first.','error');
+    setStatus('Creating API key…');
+    const d=await request('/admin/buyers/'+encodeURIComponent(buyerId)+'/keys',{method:'POST',body:JSON.stringify({name:$('keyName').value.trim()||'Dataset access',scopes:['dataset:read'],daily_limit:Number($('dailyLimit').value)||1000})});
+    secretBox.className='';
+    secretBox.innerHTML='<p class="success"><strong>API key created.</strong> Copy it now. The full secret is not shown again.</p><div class="secret">'+escapeHtml(d.api_key||'')+'</div>';
+    selectedBuyer=buyerId;
+    setStatus('API key created successfully.','success');
+    await loadDetails(buyerId);
+    await load();
+    buyerSelect.value=buyerId;
+  }catch(e){setStatus(e.message,'error');}
+}
+
+async function loadDetails(buyerId){
+  try{
+    selectedBuyer=buyerId;
+    const d=await request('/admin/buyers/'+encodeURIComponent(buyerId));
+    const keys=d.keys||[],u=d.usage||{};
+    details.innerHTML='<p><strong>Buyer:</strong> '+escapeHtml(d.buyer.buyer_id)+'</p><p><strong>Company:</strong> '+escapeHtml(d.buyer.company_name)+'</p><p><strong>Status:</strong> '+escapeHtml(d.buyer.status)+'</p><div class="actions"><button class="button secondary" type="button" data-status="active">Activate</button><button class="button secondary" type="button" data-status="suspended">Suspend</button></div><h3>API Keys</h3>'+(keys.length?'<div class="scroll"><table><tr><th>Name</th><th>Prefix</th><th>Scope</th><th>Status</th><th>Last used</th></tr>'+keys.map(k=>`<tr><td>${escapeHtml(k.name)}</td><td>${escapeHtml(k.key_prefix)}…</td><td>${escapeHtml((k.scopes||[]).join(', '))}</td><td>${k.revoked_at?'Revoked':'Active'}</td><td>${escapeHtml(k.last_used_at||'Never')}</td></tr>`).join('')+'</table></div>':'No API keys yet.')+'<h3>Usage</h3><p>Total downloads: <strong>'+Number(u.total_downloads||0)+'</strong> · Records downloaded: <strong>'+Number(u.records_downloaded||0)+'</strong> · Versions: <strong>'+Number(u.versions_downloaded||0)+'</strong></p>';
+    details.querySelectorAll('[data-status]').forEach(b=>b.addEventListener('click',()=>setBuyerStatus(b.dataset.status)));
+  }catch(e){details.innerHTML='<span class="danger">'+escapeHtml(e.message)+'</span>';}
+}
+
+async function setBuyerStatus(statusValue){
+  if(!selectedBuyer)return;
+  try{await request('/admin/buyers/'+encodeURIComponent(selectedBuyer)+'/status',{method:'POST',body:JSON.stringify({status:statusValue})});setStatus('Buyer status updated.','success');await load();await loadDetails(selectedBuyer);}catch(e){setStatus(e.message,'error');}
+}
+
+buyerSelect.addEventListener('change',()=>{selectedBuyer=buyerSelect.value;if(selectedBuyer)loadDetails(selectedBuyer);});
+token.addEventListener('input',updateButtons);
+token.addEventListener('keydown',e=>{if(e.key==='Enter')connect();});
+$('connect').addEventListener('click',connect);
+$('load').addEventListener('click',load);
+$('refresh').addEventListener('click',load);
+$('createBuyer').addEventListener('click',createBuyer);
+$('createKey').addEventListener('click',createKey);
+updateButtons();
+if(hasToken()) setStatus('Admin token loaded for this session. Click Connect & Load.');
 </script>
-</body></html>
+</body>
+</html>
