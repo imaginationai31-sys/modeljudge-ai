@@ -34,17 +34,21 @@ function syncVerifiedReviews() {
   if (result.status !== 0) console.error("Verified-review sync reported a failure; API startup will continue.");
 }
 
-function proxyApi(req, res) {
-  const headers = { ...req.headers, host: `127.0.0.1:${BACKEND_PORT}` };
-  const options = { hostname: "127.0.0.1", port: BACKEND_PORT, path: req.originalUrl, method: req.method, headers };
-  const proxy = http.request(options, backendRes => { res.writeHead(backendRes.statusCode || 502, backendRes.headers); backendRes.pipe(res); });
-  proxy.on("error", error => { console.error("API proxy error:", error.message); if (!res.headersSent) res.status(502).json({ error: "API unavailable" }); else res.end(); });
-  req.pipe(proxy);
+function generateBuyerRelease() {
+  console.log("Generating buyer dataset release from the current evaluation dataset...");
+  const result = spawnSync(process.execPath, [path.join(__dirname, "dataset-engine.js")], {
+    stdio: "inherit",
+    env: process.env,
+    cwd: path.join(__dirname, "..")
+  });
+  if (result.error) console.error("Buyer release generation failed to start:", result.error.message);
+  if (result.status !== 0) console.error("Buyer release generation reported a failure; API startup will continue so Render logs can be inspected.");
 }
 
 runMigrations();
 runCalibrationDiagnostic();
 syncVerifiedReviews();
+generateBuyerRelease();
 console.log(`Starting ModelJudge AI API internally on port ${BACKEND_PORT}...`);
 
 const backendEnv = { ...process.env, PORT: String(BACKEND_PORT) };
