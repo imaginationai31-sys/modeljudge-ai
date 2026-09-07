@@ -17,7 +17,7 @@
 <body>
 <header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span></a><nav><a href="evaluate.html">Evaluate</a><a href="dashboard.html" aria-current="page">Dataset Explorer</a><a href="index.html#methodology">Methodology</a></nav></header>
 <main class="dashboard">
-  <section class="dash-head"><div><span class="eyebrow">DATASET EXPLORER</span><h1>Evidence before purchase.</h1><p class="muted">Inspect evaluation volume, preferences, quality scores, categories, languages, and reviewer coverage.</p></div><div class="actions"><button class="button secondary" id="refreshBtn">Refresh data</button><a class="button primary" href="evaluate.html">Add evaluation</a></div></section>
+  <section class="dash-head"><div><span class="eyebrow">DATASET EXPLORER</span><h1>Evidence before purchase.</h1><p class="muted">Inspect evaluation volume, preferences, quality scores, categories, languages, and reviewer coverage.</p></div><div class="actions"><button class="button secondary" id="refreshBtn" type="button">Refresh data</button><a class="button primary" href="evaluate.html">Add evaluation</a></div></section>
 
   <section class="dash-grid">
     <div class="metric"><strong id="total">—</strong><span>Evaluations</span></div><div class="metric"><strong id="unique">—</strong><span>Unique prompts</span></div><div class="metric"><strong id="verified">—</strong><span>Human verified</span></div><div class="metric"><strong id="reviewers">—</strong><span>Reviewers</span></div>
@@ -25,22 +25,17 @@
 
   <section class="verification" id="reviewerVerification">
     <div class="section-kicker"><div><span class="eyebrow">QUALITY CONTROL</span><h2>Reviewer Verification Center</h2><p class="muted">Verify submitted evaluations, capture reviewer scores, and build auditable human-quality evidence.</p></div><span class="badge" id="reviewerStatusBadge">Reviewer status: checking</span></div>
-
     <div class="verification-grid">
       <div class="verification-card"><span class="label">Pending verification</span><strong id="pendingVerification">—</strong><div class="status-line"><span class="status-dot-small"></span>Needs reviewer action</div></div>
       <div class="verification-card"><span class="label">Verification rate</span><strong id="verificationRate">—</strong><div class="status-line">Verified / total</div></div>
       <div class="verification-card"><span class="label">Reviewer agreement</span><strong id="reviewerAgreement">—</strong><div class="status-line">Consensus evidence</div></div>
       <div class="verification-card"><span class="label">Average reviewer score</span><strong id="reviewerScore">—</strong><div class="status-line">Quality control score</div></div>
     </div>
-
     <div class="verification-workspace">
       <section class="panel review-queue">
-        <h2>Verification queue</h2>
-        <div id="reviewQueue"><div class="empty">Loading reviewer queue…</div></div>
-
+        <h2>Verification queue</h2><div id="reviewQueue"><div class="empty">Loading reviewer queue…</div></div>
         <div class="verification-form" id="verificationForm">
-          <h3 id="verificationTitle">Verify evaluation</h3>
-          <div id="verificationContent"></div>
+          <h3 id="verificationTitle">Verify evaluation</h3><div id="verificationContent"></div>
           <div class="check-list">
             <label class="check-row"><input type="checkbox" id="checkPrompt"> Prompt is clear and suitable for evaluation</label>
             <label class="check-row"><input type="checkbox" id="checkResponses"> Both responses are complete and correctly attributed</label>
@@ -54,36 +49,19 @@
             <div class="score-field"><label for="reviewSafety">Safety</label><select id="reviewSafety"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
           </div>
           <textarea id="reviewComment" class="review-comment" placeholder="Reviewer comment / verification rationale"></textarea>
-          <div class="form-actions"><button class="small-button primary-action" id="approveVerification">Approve & verify</button><button class="small-button" id="revisionVerification">Request revision</button><button class="small-button" id="rejectVerification">Reject</button><button class="small-button" id="cancelVerification">Cancel</button></div>
+          <div class="form-actions"><button class="small-button primary-action" id="approveVerification" type="button">Approve & verify</button><button class="small-button" id="revisionVerification" type="button">Request revision</button><button class="small-button" id="rejectVerification" type="button">Reject</button><button class="small-button" id="cancelVerification" type="button">Cancel</button></div>
           <div class="verification-note" style="margin-top:12px">Verification is designed to complement the existing authenticated reviewer API. Final state changes are sent to the backend when the review action is submitted.</div>
         </div>
       </section>
-
-      <aside class="panel">
-        <h2>Reviewer quality</h2>
-        <div class="reviewer-summary">
-          <div class="summary-row"><span>Calibration accuracy</span><strong id="calibrationAccuracy">—</strong></div>
-          <div><div class="summary-row"><span>Quality score</span><strong id="qualityScore">—</strong></div><div class="quality-meter"><span id="qualityMeter"></span></div></div>
-          <div class="summary-row"><span>Consecutive failures</span><strong id="consecutiveFailures">—</strong></div>
-          <div class="summary-row"><span>Control status</span><strong id="controlStatus">—</strong></div>
-          <div class="summary-row"><span>Audit events</span><strong id="auditEvents">—</strong></div>
-          <div class="verification-note">A reviewer should verify the evidence, not simply reproduce the original evaluator decision. Use the checks, independent scores, and comment to create traceable quality evidence.</div>
-        </div>
-      </aside>
+      <aside class="panel"><h2>Reviewer quality</h2><div class="reviewer-summary"><div class="summary-row"><span>Calibration accuracy</span><strong id="calibrationAccuracy">—</strong></div><div><div class="summary-row"><span>Quality score</span><strong id="qualityScore">—</strong></div><div class="quality-meter"><span id="qualityMeter"></span></div></div><div class="summary-row"><span>Consecutive failures</span><strong id="consecutiveFailures">—</strong></div><div class="summary-row"><span>Control status</span><strong id="controlStatus">—</strong></div><div class="summary-row"><span>Audit events</span><strong id="auditEvents">—</strong></div><div class="verification-note">A reviewer should verify the evidence, not simply reproduce the original evaluator decision. Use the checks, independent scores, and comment to create traceable quality evidence.</div></div></aside>
     </div>
   </section>
-
-  <section class="panels">
-    <div class="panel"><h2>Preference distribution</h2><div id="preferences"></div></div>
-    <div class="panel"><h2>Average quality</h2><div id="quality"></div></div>
-    <div class="panel"><h2>Categories</h2><div id="categories"></div></div>
-    <div class="panel"><h2>Languages</h2><div id="languages"></div></div>
-  </section>
+  <section class="panels"><div class="panel"><h2>Preference distribution</h2><div id="preferences"></div></div><div class="panel"><h2>Average quality</h2><div id="quality"></div></div><div class="panel"><h2>Categories</h2><div id="categories"></div></div><div class="panel"><h2>Languages</h2><div id="languages"></div></div></section>
   <section class="panel" style="margin-top:18px"><h2>Recent evaluations</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Category</th><th>Preference</th><th>Quality</th><th>Verified</th><th>Date</th></tr></thead><tbody id="recent"></tbody></table></div></section>
   <div class="notice" id="notice" role="status" aria-live="polite"></div>
 </main>
 <script src="config.js"></script>
-<script src="dashboard.js"></script>
+<script src="dashboard.js?v=20260907"></script>
 <script src="calibration.js"></script>
 </body>
 </html>
