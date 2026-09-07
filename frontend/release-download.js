@@ -1,10 +1,5 @@
 (() => {
   const API_BASE = String(window.MODELJUDGE_API_URL || "/api").replace(/\/$/, "");
-  const KEY_STORAGE = "modeljudge_buyer_api_key";
-
-  function esc(value) {
-    return String(value ?? "").replace(/[&<>\"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
-  }
 
   async function getRelease() {
     const response = await fetch(`${API_BASE}/release`, { headers: { Accept: "application/json" } });
@@ -46,8 +41,7 @@
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      sessionStorage.setItem(KEY_STORAGE, key);
-      status.textContent = `Verified JSONL downloaded — release v${esc(version)}, ${Number(release.record_count || 0)} records.`;
+      status.textContent = `Verified JSONL downloaded — release v${version}, ${Number(release.record_count || 0)} records.`;
       status.dataset.type = "success";
     } catch (error) {
       status.textContent = error.message || "Dataset download failed.";
@@ -66,11 +60,6 @@
     panel.style.marginBottom = "24px";
     panel.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap"><div><span class="eyebrow">BUYER DATASET</span><h2 style="margin:4px 0 6px">Verified Dataset Download</h2><p class="muted" style="margin:0">Download the current human-verified JSONL release using a buyer API key with <code>dataset:read</code> access.</p></div><div style="display:flex;gap:10px;flex:1;min-width:280px;max-width:620px"><input id="buyerDatasetKey" type="password" autocomplete="off" placeholder="Buyer API key (dataset:read)" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:inherit"><button class="button primary" id="downloadVerifiedDataset" type="button">Download JSONL</button></div></div><div id="buyerDatasetStatus" class="muted" role="status" aria-live="polite" style="margin-top:12px"></div>`;
     head.insertAdjacentElement("afterend", panel);
-
-    try {
-      const savedKey = sessionStorage.getItem(KEY_STORAGE);
-      if (savedKey) document.getElementById("buyerDatasetKey").value = savedKey;
-    } catch (_) {}
     document.getElementById("downloadVerifiedDataset").addEventListener("click", downloadDataset);
   }
 
