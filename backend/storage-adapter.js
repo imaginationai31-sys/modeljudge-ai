@@ -5,7 +5,8 @@ const db = require("./db");
 const pgStore = require("./db-store");
 
 const DATA_DIR = path.join(__dirname, "..", "data");
-const evaluationsJsonl = new JsonlStore(path.join(DATA_DIR, "evaluations.jsonl"));
+const evaluationsFile = path.join(DATA_DIR, "evaluations.jsonl");
+const evaluationsJsonl = new JsonlStore(evaluationsFile);
 const reviewsJsonl = new JsonlStore(path.join(DATA_DIR, "reviews.jsonl"));
 
 function mode() { return db.isConfigured() ? "postgres" : "jsonl"; }
@@ -43,7 +44,7 @@ async function markEvaluationVerified(id, verified = true) {
   const index = records.findIndex(r => r.id === id);
   if (index === -1) return null;
   records[index] = { ...records[index], verified };
-  await fs.writeFile(evaluationsJsonl.file, records.map(r => JSON.stringify(r)).join("\n") + (records.length ? "\n" : ""), "utf8");
+  await fs.writeFile(evaluationsFile, records.map(r => JSON.stringify(r)).join("\n") + (records.length ? "\n" : ""), "utf8");
   return records[index];
 }
 
