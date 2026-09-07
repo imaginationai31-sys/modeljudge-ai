@@ -30,6 +30,11 @@ async function insertReview(review) {
   return review;
 }
 
+async function markEvaluationVerified(id, verified = true) {
+  const result = await db.query("UPDATE evaluations SET verified = $2 WHERE id = $1 RETURNING *", [id, verified]);
+  return result.rows[0] || null;
+}
+
 async function listReviews(evaluationId) {
   const result = evaluationId ? await db.query("SELECT * FROM reviews WHERE evaluation_id = $1 ORDER BY created_at DESC", [evaluationId]) : await db.query("SELECT * FROM reviews ORDER BY created_at DESC LIMIT 500");
   return result.rows;
@@ -59,4 +64,4 @@ async function withTransaction(work) {
   } finally { client.release(); }
 }
 
-module.exports = { insertEvaluation, listEvaluations, countEvaluations, findEvaluation, fingerprintExists, insertReview, listReviews, reviewFingerprintExists, reviewerStatsRows, withTransaction };
+module.exports = { insertEvaluation, listEvaluations, countEvaluations, findEvaluation, fingerprintExists, insertReview, markEvaluationVerified, listReviews, reviewFingerprintExists, reviewerStatsRows, withTransaction };
