@@ -58,7 +58,7 @@ app.get("/api/buyer/releases/:version/manifest",buyerApi.requireScope("dataset:r
 app.get("/api/buyer/releases/:version/dataset",buyerApi.requireScope("dataset:read"),async(req,res)=>{const format=req.query.format==="csv"?"csv":"jsonl";const file=`evaluations.${format}`;try{const content=await readRelease(req.params.version,file);const manifest=JSON.parse(await readRelease(req.params.version,"RELEASE-MANIFEST.json"));await buyerApi.recordDownload({buyerId:req.buyer.buyer_id,apiKeyId:req.buyer.id,version:req.params.version,format,recordCount:manifest.record_count,ip:req.ip});res.setHeader("Content-Disposition",`attachment; filename="modeljudge-${req.params.version}.${format}"`);res.type(format==="csv"?"text/csv":"application/x-ndjson").send(content);}catch{res.status(404).json({error:"Requested release or format not found"});}});
 app.get("/api/buyer/releases/:version/quality",buyerApi.requireScope("dataset:read"),async(req,res)=>{try{res.type("json").send(await readRelease(req.params.version,"quality-report.json"));}catch{res.status(404).json({error:"Quality report not found"});}});
 app.get("/api/buyer/usage",buyerApi.requireScope("dataset:read"),async(req,res)=>{try{res.json(await buyerManagement.usage(req.buyer.buyer_id));}catch(error){return sendStorageError(res,error,"Buyer usage unavailable");}});
-app.get("/api/buyer/keys",buyerApi.requireScope("dataset:read"),async(req,res)=>{try{res.json({buyer_id:req.buyer.buyer_id,keys:await buyerManagement.listKeys(req.buyer.buyer_id)});}catch(error){return sendStorageError(res,error,"Buyer key list unavailable");}});
+app.get("/api/buyer/keys",buyerApi.requireScope("dataset:read"),async(req,res)=>{try{res.json({buyer_id:req.buyer.buyer_id,keys:await buyerManagement.listKeys(req.buyer.buyer_id)});}catch(error){return sendStorageError(res,error,"Unable to list buyer API keys");}});
 app.post("/api/buyer/keys/:keyId/revoke",buyerApi.requireScope("dataset:read"),async(req,res)=>{try{const result=await buyerManagement.revokeKey(req.params.keyId,req.buyer.buyer_id);if(!result)return res.status(404).json({error:"API key not found"});res.json(result);}catch(error){return sendStorageError(res,error,"Unable to revoke API key");}});
 app.post("/api/buyer/keys/:keyId/rotate",buyerApi.requireScope("dataset:read"),async(req,res)=>{try{const result=await buyerManagement.rotateKey(req.params.keyId,req.buyer.buyer_id,req.body?.name);if(!result)return res.status(404).json({error:"Active API key not found"});res.json(result);}catch(error){return sendStorageError(res,error,"Unable to rotate API key");}});
 app.get("/api/admin/buyers",requireAdmin,async(req,res)=>{try{res.json({buyers:await buyerManagement.listBuyers()});}catch(error){return sendStorageError(res,error,"Unable to list buyers");}});
@@ -67,11 +67,33 @@ app.get("/api/admin/buyers/:buyerId",requireAdmin,async(req,res)=>{try{const buy
 app.post("/api/admin/buyers/:buyerId/status",requireAdmin,async(req,res)=>{if(!["active","suspended","closed"].includes(req.body?.status))return res.status(400).json({error:"status must be active, suspended, or closed"});try{const buyer=await buyerManagement.setBuyerStatus(req.params.buyerId,req.body.status);if(!buyer)return res.status(404).json({error:"Buyer not found"});res.json(buyer);}catch(error){return sendStorageError(res,error,"Unable to update buyer status");}});
 app.post("/api/admin/buyers/:buyerId/keys",requireAdmin,async(req,res)=>{try{const result=await buyerApi.createBuyerKey({buyerId:req.params.buyerId,name:req.body?.name,scopes:req.body?.scopes||["dataset:read"],dailyLimit:Number(req.body?.daily_limit)||1000});res.status(201).json(result);}catch(error){return sendStorageError(res,error,"Unable to create buyer API key");}});
 
+async function logVerificationDiagnostic() {
+  if (store.mode() !== "postgres") return;
+  try {
+    const reviews = await db.query(`SELECT COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(verification_action,''))='approved')::int AS approved_action,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(verification_action,''))='pending')::int AS pending_action,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(verification_action,''))='revision requested')::int AS revision_requested_action,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(verification_action,''))='rejected')::int AS rejected_action,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(reason,'')) LIKE 'reviewer approved:%')::int AS approved_reason,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(reason,'')) LIKE 'reviewer revision requested:%')::int AS revision_requested_reason,
+      COUNT(*) FILTER (WHERE LOWER(COALESCE(reason,'')) LIKE 'reviewer rejected:%')::int AS rejected_reason
+      FROM reviews`);
+    const evaluations = await db.query(`SELECT COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE verified=TRUE)::int AS verified
+      FROM evaluations`);
+    console.log("Verification diagnostic:", JSON.stringify({reviews: reviews.rows[0], evaluations: evaluations.rows[0]}));
+  } catch (error) {
+    console.error("Verification diagnostic failed:", error.message);
+  }
+}
+
 async function startServer() {
   if (store.mode() === "postgres") {
     try {
       const repaired = await store.syncApprovedReviews();
       if (repaired.verified > 0) console.log(`[verification] restored ${repaired.verified} approved evaluation(s) to verified=true`);
+      await logVerificationDiagnostic();
     } catch (error) {
       console.error("[verification] startup sync failed:", error);
     }
