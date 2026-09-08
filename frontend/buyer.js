@@ -131,8 +131,11 @@
       }
     }
 
-    connectButton.addEventListener("click", load);
-    if (clearButton) clearButton.addEventListener("click", () => {
+    async function safeLoad() {
+      try { await load(); } catch (e) { setStatus(`Connection failed: ${e.message || "Unknown error"}`, true); }
+    }
+
+    function clear() {
       buyerKey = "";
       keyInput.value = "";
       selectedVersion = "";
@@ -141,7 +144,11 @@
       if (usageEl) usageEl.textContent = "No usage details exposed to the browser.";
       if (evidenceEl) evidenceEl.innerHTML = "<div class='empty'>No release selected.</div>";
       if (versionSelect) versionSelect.innerHTML = "<option value=\"\">Connect first</option>";
-    });
+    }
+
+    window.ModelJudgeBuyer = { connect: safeLoad, clear };
+    connectButton.addEventListener("click", safeLoad);
+    if (clearButton) clearButton.addEventListener("click", clear);
     if (versionSelect) versionSelect.addEventListener("change", () => { if (versionSelect.value) inspect(versionSelect.value); });
   }
 
