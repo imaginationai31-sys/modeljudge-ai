@@ -16,7 +16,7 @@
     "release": "node ../scripts/create-release.js",
     "buyer-key": "node ../scripts/create-buyer-key.js",
     "migrate": "node ../scripts/migrate.js",
-    "test": "node --test ../tests/*.test.js"
+    "test": "node --experimental-test-coverage --test ../tests/*.test.js"
   },
   "engines": { "node": ">=20" },
   "dependencies": {
