@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ModelJudge AI buyer API documentation, release access, quality evidence, and dataset download workflow.">
+  <title>ModelJudge AI · Buyer API</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .docs{width:min(1000px,calc(100% - 40px));margin:auto;padding:70px 0 90px}.docs h1{font-size:48px;line-height:1.05;letter-spacing:-.04em;margin:8px 0 18px}.docs h2{font-size:28px;margin:0 0 12px}.docs p{color:var(--muted)}.doc-hero{max-width:780px;margin-bottom:34px}.doc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:28px 0 50px}.doc-card{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.025);padding:22px}.doc-card strong{display:block;font-size:24px;margin-bottom:4px}.doc-section{border-top:1px solid var(--line);padding:38px 0}.endpoint{display:grid;grid-template-columns:115px 1fr;gap:14px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line)}.method{font-weight:850;color:var(--success)}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#dce5ff}.codebox{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#080d19;padding:18px;margin-top:14px;color:#dce5ff}.steps{display:grid;gap:12px;counter-reset:step}.steps div{border:1px solid var(--line);border-radius:13px;padding:15px 18px;background:rgba(255,255,255,.02)}.security{border:1px solid var(--line);border-radius:16px;padding:20px;background:rgba(124,156,255,.06)}@media(max-width:700px){.docs{padding-top:45px}.docs h1{font-size:38px}.doc-grid{grid-template-columns:1fr}.endpoint{grid-template-columns:1fr;gap:4px}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="ModelJudge AI home"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span></a>
+    <nav><a href="evaluate.html">Evaluate</a><a href="dashboard.html">Dataset Explorer</a><a href="releases.html">Dataset Releases</a><a href="buyer.html">Buyer Console</a><a href="api.html">API</a></nav>
+  </header>
+  <main class="docs">
+    <section class="doc-hero">
+      <span class="eyebrow">BUYER API</span>
+      <h1>Verified evaluation data, with a clear path from release to download.</h1>
+      <p>ModelJudge AI exposes versioned evaluation releases through an authenticated buyer API. Pin a release, inspect quality evidence, download JSONL or CSV, and verify the file against its SHA-256 manifest.</p>
+      <div class="hero-actions"><a class="button primary" href="buyer.html">Open Buyer Console</a><a class="button secondary" href="releases.html">View Releases</a></div>
+    </section>
+
+    <section class="doc-grid">
+      <div class="doc-card"><strong>v0.9.1</strong><span>Current immutable release</span></div>
+      <div class="doc-card"><strong>5 / 5</strong><span>Human verified records</span></div>
+      <div class="doc-card"><strong>4.25 / 5</strong><span>Average quality score</span></div>
+      <div class="doc-card"><strong>JSONL + CSV</strong><span>Machine-readable exports</span></div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Authentication</h2>
+      <p>Buyer endpoints require a valid API key with the <code>dataset:read</code> scope. Send the key using either supported header.</p>
+      <div class="codebox"><code>X-API-Key: mj_live_...<br>Authorization: Bearer mj_live_...</code></div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Release endpoints</h2>
+      <p>Base URL: <code>https://modeljudge-api.onrender.com</code></p>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/releases</code></div>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/releases/0.9.1/manifest</code></div>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/releases/0.9.1/quality</code></div>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/releases/0.9.1/reviewer-quality</code></div>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/releases/0.9.1/dataset?format=jsonl</code></div>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/releases/0.9.1/dataset?format=csv</code></div>
+      <div class="endpoint"><span class="method">GET</span><code>/api/buyer/usage</code></div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Recommended buyer workflow</h2>
+      <div class="steps">
+        <div><b>1. List releases.</b> Discover available immutable dataset versions.</div>
+        <div><b>2. Pin the exact version.</b> Use a specific release such as <code>0.9.1</code> for reproducibility.</div>
+        <div><b>3. Inspect evidence.</b> Read the manifest, quality, and reviewer-quality endpoints.</div>
+        <div><b>4. Download.</b> Request JSONL or CSV using the authenticated endpoint.</div>
+        <div><b>5. Verify integrity.</b> Compare downloaded bytes and SHA-256 against the manifest before use.</div>
+      </div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Integrity & provenance</h2>
+      <div class="security"><b>Release v0.9.1 is immutable.</b><p>The manifest records file size and SHA-256 checksums for each release artifact. Dataset provenance and licensing should be reviewed before commercial use.</p></div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Security</h2>
+      <p>Never place a buyer API key in public source code, browser JavaScript, URLs, screenshots, notebooks, or logs. Store credentials in a secure server-side secret manager or environment variable.</p>
+      <div class="hero-actions"><a class="button primary" href="buyer.html">Go to Buyer Console</a><a class="button secondary" href="index.html">Back to ModelJudge AI</a></div>
+    </section>
+  </main>
+  <footer><span>ModelJudge AI</span><span>Buyer API · v0.9.1</span></footer>
+</body>
+</html>
