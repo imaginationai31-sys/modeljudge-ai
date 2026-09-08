@@ -66,6 +66,11 @@
         throw new Error(`Checksum verification failed: expected ${expected.sha256}, received ${actual}. The file was not downloaded.`);
       }
 
+      try {
+        sessionStorage.setItem(`modeljudge_checksum_verified_v${version}`, "true");
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent("modeljudge:checksum-verified", { detail: { version, bytes: actualBytes, sha256: actual } }));
+
       const blob = new Blob([buffer], { type: "application/jsonl" });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
