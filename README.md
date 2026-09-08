@@ -2,9 +2,20 @@
 
 Human preference and AI response evaluation platform for building structured model-evaluation datasets.
 
+> **Software asset:** ModelJudge AI is a deployable evaluation platform with human review, verification, calibration, quality controls, PostgreSQL storage, versioned releases, and an authenticated buyer API.
+
+**Live platform:** https://modeljudge-api.onrender.com  
+**Asset & technical overview:** [docs/ACQUISITION_OVERVIEW.md](docs/ACQUISITION_OVERVIEW.md)
+
 ## What is ModelJudge AI?
 
 ModelJudge AI is an evaluation workspace for comparing AI responses using consistent human scoring criteria. Completed evaluations can become structured, auditable dataset records for benchmarking and post-training research.
+
+## Why this is a software asset
+
+The primary value of the repository is the reusable application and infrastructure, not only the current demonstration dataset. An operator can deploy, customize, extend, and integrate the platform into its own AI evaluation workflow.
+
+The repository includes the frontend, backend API, PostgreSQL persistence layer, migrations, reviewer workflows, verification logic, quality pipeline, release system, buyer API, documentation, tests, and CI configuration.
 
 ## Buyer-ready capabilities
 
@@ -25,7 +36,8 @@ ModelJudge AI is an evaluation workspace for comparing AI responses using consis
 - Buyer API-key authentication, quotas, and access logging
 - Buyer portal and release inspection
 - Quality Center and certification-readiness evidence
-- CI verification and production deployment workflow
+- Automated tests and GitHub Actions CI
+- Production deployment workflow
 
 ## Buyer workflow
 
@@ -39,6 +51,7 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 
 ## Buyer resources
 
+- `docs/ACQUISITION_OVERVIEW.md` — software-asset acquisition and technical overview
 - `docs/BUYER_ONBOARDING.md` — buyer workflow, data fields, verification, and security
 - `docs/API_QUICKSTART.md` — authenticated API examples
 - `docs/BUYER_API.md` — buyer API architecture and controls
@@ -78,6 +91,33 @@ modeljudge-ai/
 ├── SECURITY.md
 └── LICENSE
 ```
+
+## Automated tests & CI
+
+The repository contains Node.js test coverage for core evaluation components, including calibration, quality filtering, reliability reporting, reviewer quality control, and reviewer behavior.
+
+Run the automated test suite:
+
+```bash
+cd backend
+npm test
+```
+
+Run the complete quality pipeline:
+
+```bash
+cd backend
+npm test
+npm run validate
+npm run export
+npm run filter
+npm run reliability
+npm run reviewer-control
+npm run certification
+npm run release
+```
+
+GitHub Actions runs tests and the dataset/quality pipeline on pushes to `main` and pull requests targeting `main`. Quality reports are uploaded as CI artifacts. Production deployment remains separately controlled by the deployment workflow and environment configuration.
 
 ## Run locally
 
@@ -148,6 +188,8 @@ Quality metrics describe the evaluation process; they are not guarantees of univ
 - [x] Buyer API and buyer portal
 - [x] Security hardening
 - [x] Production deployment workflow
+- [x] Automated test suite
+- [x] GitHub Actions CI
 - [x] Buyer onboarding and demo documentation
 - [ ] Live production infrastructure configuration
 - [ ] Independent external dataset audit
