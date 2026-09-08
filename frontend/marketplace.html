@@ -3,81 +3,76 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="ModelJudge AI human preference dataset marketplace — verified evaluations, quality evidence, immutable releases, and buyer API access.">
-  <title>Dataset Marketplace · ModelJudge AI</title>
+  <meta name="description" content="ModelJudge AI software asset overview — a deployable AI evaluation platform with human preference workflows, reviewer quality control, buyer API, versioned releases, and PostgreSQL storage.">
+  <title>Asset Overview · ModelJudge AI</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    .market-hero{width:min(1180px,calc(100% - 40px));margin:auto;padding:78px 0 55px;display:grid;grid-template-columns:1.35fr .65fr;gap:55px;align-items:center}
-    .market-hero h1{font-size:clamp(42px,6vw,72px);line-height:.98;letter-spacing:-.055em;margin:9px 0 20px;max-width:850px}
-    .market-hero h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
-    .market-hero p{font-size:18px;color:var(--muted);max-width:720px}
-    .market-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
-    .release-card{border:1px solid var(--line);border-radius:22px;padding:25px;background:linear-gradient(145deg,rgba(124,156,255,.12),rgba(255,255,255,.025));box-shadow:var(--shadow)}
-    .release-card .live{display:inline-flex;border:1px solid rgba(99,215,160,.35);color:var(--success);background:rgba(99,215,160,.07);border-radius:999px;padding:5px 9px;font-size:10px;font-weight:800;letter-spacing:.1em}
-    .release-card h2{font-size:32px;margin:18px 0 4px}.release-card p{font-size:13px;margin:0;color:var(--muted)}
-    .release-card dl{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:25px 0 0}.release-card dt{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.release-card dd{margin:2px 0 0;font-weight:800}
-    .market-section{width:min(1180px,calc(100% - 40px));margin:0 auto 70px}.market-section h2{font-size:34px;letter-spacing:-.035em;margin:0 0 9px}.market-section>p{color:var(--muted);max-width:760px}
-    .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.feature{border:1px solid var(--line);border-radius:17px;padding:22px;background:rgba(255,255,255,.025)}.feature strong{display:block;font-size:16px;margin-bottom:5px}.feature span{color:var(--muted);font-size:13px}
-    .buyer-panel{display:grid;grid-template-columns:1fr 1fr;gap:14px}.buyer-panel>div{border:1px solid var(--line);border-radius:18px;padding:24px;background:rgba(18,26,45,.75)}.buyer-panel h3{margin-top:0}.buyer-panel p{color:var(--muted);font-size:13px}.sample{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;color:#d9e2f5;background:#0d1426;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto}
-    .cta{border:1px solid var(--line);border-radius:22px;padding:35px;background:linear-gradient(145deg,rgba(157,124,255,.1),rgba(255,255,255,.025));display:flex;justify-content:space-between;gap:30px;align-items:center}.cta h2{margin:0 0 8px}.cta p{margin:0;color:var(--muted)}
-    @media(max-width:800px){.market-hero,.buyer-panel{grid-template-columns:1fr}.feature-grid{grid-template-columns:1fr}.market-hero{padding:55px 0 40px}.cta{flex-direction:column;align-items:flex-start}}
+    .asset-hero{width:min(1180px,calc(100% - 40px));margin:auto;padding:78px 0 55px;display:grid;grid-template-columns:1.35fr .65fr;gap:55px;align-items:center}.asset-hero h1{font-size:clamp(42px,6vw,72px);line-height:.98;letter-spacing:-.055em;margin:9px 0 20px}.asset-hero h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}.asset-hero p{font-size:18px;color:var(--muted);max-width:720px}.asset-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}.asset-card{border:1px solid var(--line);border-radius:22px;padding:25px;background:linear-gradient(145deg,rgba(124,156,255,.12),rgba(255,255,255,.025));box-shadow:var(--shadow)}.asset-card .live{display:inline-flex;border:1px solid rgba(99,215,160,.35);color:var(--success);background:rgba(99,215,160,.07);border-radius:999px;padding:5px 9px;font-size:10px;font-weight:800;letter-spacing:.1em}.asset-card h2{font-size:30px;margin:18px 0 5px}.asset-card p{font-size:13px;margin:0;color:var(--muted)}.asset-card dl{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:25px 0 0}.asset-card dt{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.asset-card dd{margin:2px 0 0;font-weight:800}.asset-section{width:min(1180px,calc(100% - 40px));margin:0 auto 70px}.asset-section h2{font-size:34px;letter-spacing:-.035em;margin:0 0 9px}.asset-section>p{color:var(--muted);max-width:780px}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.feature{border:1px solid var(--line);border-radius:17px;padding:22px;background:rgba(255,255,255,.025)}.feature strong{display:block;font-size:16px;margin-bottom:5px}.feature span{color:var(--muted);font-size:13px}..stack-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:24px}.stack{border:1px solid var(--line);border-radius:14px;padding:18px;background:rgba(18,26,45,.65)}.stack strong{display:block}.stack span{display:block;color:var(--muted);font-size:12px;margin-top:4px}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:24px}.step{border:1px solid var(--line);border-radius:15px;padding:18px;background:rgba(255,255,255,.025)}.step b{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em}.step strong{display:block;margin-top:8px}.acquire{border:1px solid var(--line);border-radius:22px;padding:35px;background:linear-gradient(145deg,rgba(157,124,255,.1),rgba(255,255,255,.025));display:flex;justify-content:space-between;gap:30px;align-items:center}.acquire h2{margin:0 0 8px}.acquire p{margin:0;color:var(--muted);max-width:700px}.notice{border-left:3px solid var(--accent);padding:14px 18px;margin-top:22px;background:rgba(255,255,255,.025);color:var(--muted);font-size:13px}@media(max-width:800px){.asset-hero{grid-template-columns:1fr}.feature-grid,.stack-grid{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}.asset-hero{padding:55px 0 40px}.acquire{flex-direction:column;align-items:flex-start}}
   </style>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="index.html"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span></a>
-    <nav>
-      <a href="evaluate.html">Evaluate</a><a href="dashboard.html">Dataset Explorer</a><a href="releases.html">Dataset Releases</a><a href="buyer.html">Buyer Console</a><a href="api.html">API</a><a href="marketplace.html">Marketplace</a>
-    </nav>
+    <nav><a href="evaluate.html">Evaluate</a><a href="dashboard.html">Dataset Explorer</a><a href="releases.html">Dataset Releases</a><a href="buyer.html">Buyer Console</a><a href="api.html">API</a><a href="marketplace.html">Asset Overview</a></nav>
   </header>
 
   <main>
-    <section class="market-hero">
+    <section class="asset-hero">
       <div>
-        <span class="eyebrow">DATASET MARKETPLACE</span>
-        <h1>Human preference data for <span>real AI evaluation workflows.</span></h1>
-        <p>ModelJudge AI turns structured human judgments into auditable, machine-readable evaluation records. Explore the current release, inspect quality evidence, and integrate verified data through the buyer API.</p>
-        <div class="market-actions"><a class="button primary" href="buyer.html">Open Buyer Console</a><a class="button secondary" href="api.html">Read API Docs</a><a class="button secondary" href="releases.html">Inspect Release</a></div>
+        <span class="eyebrow">SOFTWARE ASSET</span>
+        <h1>ModelJudge AI — <span>an AI evaluation platform built to acquire and extend.</span></h1>
+        <p>A deployable software foundation for structured human preference evaluation, reviewer quality control, versioned dataset releases, buyer API access, and PostgreSQL-backed persistence.</p>
+        <div class="asset-actions"><a class="button primary" href="index.html">View Live Platform</a><a class="button secondary" href="api.html">Technical Overview</a><a class="button secondary" href="https://github.com/imaginationai31-sys/modeljudge-ai">View GitHub</a></div>
       </div>
-      <aside class="release-card">
-        <span class="live">CURRENT RELEASE</span>
-        <h2>v0.9.1</h2><p>Immutable human preference dataset</p>
-        <dl><div><dt>Records</dt><dd>5</dd></div><div><dt>Verified</dt><dd>5 / 5</dd></div><div><dt>Quality</dt><dd>4.25 / 5</dd></div><div><dt>Formats</dt><dd>JSONL + CSV</dd></div></dl>
+      <aside class="asset-card">
+        <span class="live">CURRENT BUILD</span>
+        <h2>v0.9.1</h2><p>Deployed AI evaluation software foundation</p>
+        <dl><div><dt>Evaluations</dt><dd>5</dd></div><div><dt>Verified</dt><dd>100%</dd></div><div><dt>Quality</dt><dd>4.25 / 5</dd></div><div><dt>Storage</dt><dd>PostgreSQL</dd></div></dl>
       </aside>
     </section>
 
-    <section class="market-section">
-      <span class="eyebrow">WHAT BUYERS RECEIVE</span><h2>Evidence attached to every release.</h2><p>The current buyer workflow is designed around reproducibility: pin a release, inspect its manifest and quality evidence, download the selected format, and verify the published SHA-256 checksum.</p>
+    <section class="asset-section">
+      <span class="eyebrow">WHAT THE BUYER ACQUIRES</span><h2>A complete working product foundation.</h2><p>The asset is the software and infrastructure behind the live platform—not merely the current dataset. The existing workflows can be operated, customized, and extended by a new owner.</p>
       <div class="feature-grid">
-        <div class="feature"><strong>Human verification</strong><span>Current release contains 5 verified evaluation records.</span></div>
-        <div class="feature"><strong>Quality evidence</strong><span>Average quality score and reviewer-level statistics are exposed.</span></div>
-        <div class="feature"><strong>Immutable versions</strong><span>Release identifiers and checksums support reproducible consumption.</span></div>
-        <div class="feature"><strong>Machine-readable exports</strong><span>JSONL and CSV formats are available through the buyer API.</span></div>
-        <div class="feature"><strong>API authentication</strong><span>Buyer access uses scoped API keys with usage tracking.</span></div>
-        <div class="feature"><strong>Provenance signals</strong><span>Release metadata includes provenance and licensing guidance.</span></div>
+        <div class="feature"><strong>Evaluation workspace</strong><span>Structured human preference collection with quality dimensions and categories.</span></div>
+        <div class="feature"><strong>Reviewer system</strong><span>Human verification, reviewer quality evidence, and calibration workflows.</span></div>
+        <div class="feature"><strong>Buyer API</strong><span>Authenticated, scoped access to release catalogs, quality evidence, and exports.</span></div>
+        <div class="feature"><strong>Release pipeline</strong><span>Versioned immutable releases with JSONL, CSV, manifests, and checksums.</span></div>
+        <div class="feature"><strong>PostgreSQL persistence</strong><span>Database-backed evaluations, reviews, migrations, and operational state.</span></div>
+        <div class="feature"><strong>Deployment foundation</strong><span>GitHub-based source control with Render deployment and startup migrations.</span></div>
       </div>
     </section>
 
-    <section class="market-section">
-      <span class="eyebrow">SAMPLE RECORD</span><h2>Structured for downstream pipelines.</h2><p>A ModelJudge record preserves the judgment context rather than reducing an evaluation to a single preference label.</p>
-      <div class="buyer-panel">
-        <div><h3>Evaluation record</h3><div class="sample">{
-  "prompt": "Compare two AI responses to a user request",
-  "preference": "A",
-  "scores": {
-    "accuracy": 5,
-    "relevance": 4,
-    "clarity": 4,
-    "helpfulness": 5
-  },
-  "human_rationale": "Response A is more complete and directly addresses the request.",
-  "verified": true
-}</div></div>
-        <div><h3>Built for buyers</h3><p><b>Recommended flow</b></p><p>1. List available releases.<br>2. Pin an exact release version.<br>3. Read manifest and quality evidence.<br>4. Download JSONL or CSV.<br>5. Verify SHA-256 before ingestion.<br>6. Retain the release manifest with your dataset copy.</p><a class="button secondary" href="api.html">View integration guide</a></div>
+    <section class="asset-section">
+      <span class="eyebrow">TECHNICAL STACK</span><h2>Built as an extendable web application.</h2>
+      <div class="stack-grid">
+        <div class="stack"><strong>Node.js</strong><span>Backend runtime</span></div><div class="stack"><strong>Express</strong><span>REST API and web server</span></div><div class="stack"><strong>PostgreSQL</strong><span>Persistent application storage</span></div><div class="stack"><strong>HTML / CSS / JS</strong><span>Responsive frontend</span></div><div class="stack"><strong>REST API</strong><span>Buyer and application endpoints</span></div><div class="stack"><strong>GitHub</strong><span>Source repository and version control</span></div><div class="stack"><strong>Render</strong><span>Live deployment foundation</span></div><div class="stack"><strong>SQL migrations</strong><span>Repeatable database setup</span></div>
       </div>
     </section>
 
-    <section class="market-section"><div class="cta"><div><h2>Ready to inspect the dataset?</h2><p>Use the public release page for evidence or the authenticated console for buyer API access.</p></div><div class="market-actions"><a class="button primary" href="releases.html">View Release</a><a class="button secondary" href="buyer.html">Buyer Console</a></div></div></section>
+    <section class="asset-section">
+      <span class="eyebrow">LIVE PROOF</span><h2>Already deployed and demonstrable.</h2><p>The current build provides a concrete working reference for an acquirer evaluating the software rather than a static mockup.</p>
+      <div class="feature-grid">
+        <div class="feature"><strong>5 human evaluations</strong><span>Current live evaluation records demonstrate the workflow.</span></div>
+        <div class="feature"><strong>5 / 5 verified</strong><span>Current release has 100% human verification.</span></div>
+        <div class="feature"><strong>4.25 / 5 quality</strong><span>Reviewer quality evidence is available in the buyer workflow.</span></div>
+        <div class="feature"><strong>Immutable v0.9.1</strong><span>Release metadata and SHA-256 integrity checks are implemented.</span></div>
+        <div class="feature"><strong>JSONL + CSV</strong><span>Machine-readable release formats are supported.</span></div>
+        <div class="feature"><strong>Authenticated API</strong><span>Buyer access supports scoped API-key authentication and usage tracking.</span></div>
+      </div>
+      <div class="notice">The current numbers demonstrate the working software pipeline; they should not be interpreted as a claim of production-scale dataset volume or independent third-party certification.</div>
+    </section>
+
+    <section class="asset-section">
+      <span class="eyebrow">HOW IT WORKS</span><h2>From human judgment to auditable release.</h2>
+      <div class="flow"><div class="step"><b>01</b><strong>Evaluate</strong><span>Collect structured human judgments.</span></div><div class="step"><b>02</b><strong>Review</strong><span>Apply reviewer verification and quality controls.</span></div><div class="step"><b>03</b><strong>Persist</strong><span>Store evaluation state in PostgreSQL.</span></div><div class="step"><b>04</b><strong>Release</strong><span>Create versioned machine-readable exports.</span></div><div class="step"><b>05</b><strong>Integrate</strong><span>Expose authenticated buyer API access.</span></div></div>
+    </section>
+
+    <section class="asset-section">
+      <span class="eyebrow">EXPANSION POTENTIAL</span><h2>A foundation for the next owner.</h2><p>The platform can be extended with larger evaluation datasets, additional reviewers, team accounts, billing, more model providers, advanced analytics, enterprise access controls, and richer benchmarking workflows.</p>
+    </section>
+
+    <section class="asset-section"><div class="acquire"><div><h2>Interested in acquiring ModelJudge AI?</h2><p>Acquire the existing software foundation and continue development, customization, deployment, and commercialization under your own ownership, subject to a separate review of repository licensing, third-party dependencies, data provenance, and transfer terms.</p></div><div class="asset-actions"><a class="button primary" href="https://github.com/imaginationai31-sys/modeljudge-ai">Review Repository</a><a class="button secondary" href="api.html">Technical Docs</a><a class="button secondary" href="index.html">Live Demo</a></div></div></section>
   </main>
   <footer><span>ModelJudge AI</span><span>Advanced MVP · Production deployment</span></footer>
 </body>
