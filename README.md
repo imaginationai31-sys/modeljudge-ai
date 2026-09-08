@@ -52,6 +52,7 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 ## Buyer resources
 
 - `docs/ACQUISITION_OVERVIEW.md` — software-asset acquisition and technical overview
+- `docs/TECHNICAL_ARCHITECTURE.md` — system architecture, data flow, security boundaries, deployment, and extension points
 - `docs/BUYER_ONBOARDING.md` — buyer workflow, data fields, verification, and security
 - `docs/API_QUICKSTART.md` — authenticated API examples
 - `docs/BUYER_API.md` — buyer API architecture and controls
