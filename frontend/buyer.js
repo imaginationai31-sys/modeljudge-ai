@@ -24,10 +24,19 @@
       statusEl.className = `status${bad ? " danger" : ""}`;
     }
     function authHeaders(extra = {}) {
-      return { Accept: "application/json", "X-API-Key": key(), ...extra };
+      const k = key();
+      return {
+        Accept: "application/json",
+        "X-API-Key": k,
+        Authorization: `Bearer ${k}`,
+        ...extra
+      };
     }
     async function api(path, options = {}) {
-      const res = await fetch(`${API_BASE}/buyer${path}`, { ...options, headers: authHeaders(options.headers || {}) });
+      const res = await fetch(`${API_BASE}/buyer${path}`, {
+        ...options,
+        headers: authHeaders(options.headers || {})
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
       return data;
