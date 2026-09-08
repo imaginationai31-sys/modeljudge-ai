@@ -6,7 +6,7 @@
 </style></head>
 <body><header class="topbar"><a class="brand" href="index.html"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>Buyer Developer Console</small></span></a><nav><a href="dashboard.html">Explorer</a><a href="quality.html">Quality</a><a href="buyer.html" aria-current="page">Developer Console</a></nav></header>
 <main class="portal"><section class="hero"><div><span class="eyebrow">BUYER DEVELOPER CONSOLE</span><h1>Inspect. Verify. Integrate.</h1><p class="muted">Authenticated access to versioned ModelJudge AI releases, quality evidence, reviewer evidence, usage, and ready-to-copy API requests.</p></div><span class="pill">dataset:read</span></section>
-<div class="grid"><section class="card"><h2>API access</h2><p class="muted">Enter a buyer API key locally. The key is kept only in this page's memory and is not written to localStorage, sessionStorage, URLs, or generated API examples.</p><div class="field"><label for="apiKey">Buyer API key</label><input id="apiKey" type="password" autocomplete="off" placeholder="mj_live_..."></div><div class="buttonrow"><button class="button primary" id="connect" type="button" onclick="window.ModelJudgeBuyerFallback()">Connect</button><button class="button secondary" id="clear" type="button">Clear</button></div><div id="status" class="status">Not connected</div></section>
+<div class="grid"><section class="card"><h2>API access</h2><p class="muted">Enter a buyer API key locally. The key is kept only in this page's memory and is not written to localStorage, sessionStorage, URLs, or generated API examples.</p><div class="field"><label for="apiKey">Buyer API key</label><input id="apiKey" type="password" autocomplete="off" placeholder="mj_live_..."></div><div class="buttonrow"><button class="button primary" id="connect" type="button">Connect</button><button class="button secondary" id="clear" type="button">Clear</button></div><div id="status" class="status">Not connected</div></section>
 <section class="card"><h2>Release catalog</h2><p class="muted">Browse immutable versions available to this API key.</p><div id="releases"><div class="empty">Connect to load releases.</div></div></section>
 <section class="card"><h2>API usage</h2><p class="muted">Server-side usage and download activity for the authenticated buyer.</p><div id="usage">No usage details exposed to the browser.</div></section></div>
 <section class="card" style="margin-top:18px"><h2>Release evidence</h2><p class="muted">Select a release to inspect the manifest, quality report, and reviewer-quality evidence.</p><div id="evidence"><div class="empty">No release selected.</div></div></section>
@@ -15,21 +15,4 @@
   https://modeljudge-api.onrender.com/api/buyer/usage</pre></div></div></section>
 <section class="card" style="margin-top:18px"><h2>Integration checklist</h2><div class="metric-grid"><div class="metric"><span>Authentication</span><strong>API key</strong></div><div class="metric"><span>Scope</span><strong>dataset:read</strong></div><div class="metric"><span>Formats</span><strong>JSONL + CSV</strong></div><div class="metric"><span>Integrity</span><strong>SHA-256</strong></div></div><p class="muted small" style="margin-bottom:0">Recommended buyer flow: list releases → pin an exact version → inspect manifest and quality → inspect reviewer evidence → download → verify SHA-256 → retain the manifest/checksum with your dataset copy.</p></section>
 </main>
-<script>
-window.ModelJudgeBuyerFallback = async function(){
-  const input=document.getElementById('apiKey'), status=document.getElementById('status');
-  const key=(input?.value||'').trim();
-  if(!key){status.textContent='Enter a buyer API key';status.className='status danger';return;}
-  status.textContent='Connecting…';status.className='status';
-  try{
-    const r=await fetch('/api/buyer/releases',{headers:{Accept:'application/json','X-API-Key':key,Authorization:'Bearer '+key}});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(d.error||'Request failed ('+r.status+')');
-    const versions=Array.isArray(d.versions)?d.versions:[];
-    document.getElementById('releases').innerHTML=versions.length?versions.map(v=>'<div class="release"><div><strong>v'+String(v)+'</strong><span class="muted"> Immutable release</span></div></div>').join(''):'<div class="empty">No releases published yet.</div>';
-    status.textContent='Connected · '+versions.length+' release'+(versions.length===1?'':'s')+' available';status.className='status success';
-    if(versions.length){const s=document.getElementById('quickVersion');s.innerHTML=versions.map(v=>'<option value="'+String(v)+'">v'+String(v)+'</option>').join('');}
-    window.__MODELJUDGE_BUYER_KEY=key;
-  }catch(e){status.textContent='Connection failed: '+(e.message||'Unknown error');status.className='status danger';}
-};
-</script><script src="buyer.js?v=20260910" defer></script></body></html>
+<script src="buyer.js?v=20260911" defer></script></body></html>
