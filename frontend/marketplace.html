@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ModelJudge AI human preference dataset marketplace — verified evaluations, quality evidence, immutable releases, and buyer API access.">
+  <title>Dataset Marketplace · ModelJudge AI</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .market-hero{width:min(1180px,calc(100% - 40px));margin:auto;padding:78px 0 55px;display:grid;grid-template-columns:1.35fr .65fr;gap:55px;align-items:center}
+    .market-hero h1{font-size:clamp(42px,6vw,72px);line-height:.98;letter-spacing:-.055em;margin:9px 0 20px;max-width:850px}
+    .market-hero h1 span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+    .market-hero p{font-size:18px;color:var(--muted);max-width:720px}
+    .market-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+    .release-card{border:1px solid var(--line);border-radius:22px;padding:25px;background:linear-gradient(145deg,rgba(124,156,255,.12),rgba(255,255,255,.025));box-shadow:var(--shadow)}
+    .release-card .live{display:inline-flex;border:1px solid rgba(99,215,160,.35);color:var(--success);background:rgba(99,215,160,.07);border-radius:999px;padding:5px 9px;font-size:10px;font-weight:800;letter-spacing:.1em}
+    .release-card h2{font-size:32px;margin:18px 0 4px}.release-card p{font-size:13px;margin:0;color:var(--muted)}
+    .release-card dl{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:25px 0 0}.release-card dt{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.release-card dd{margin:2px 0 0;font-weight:800}
+    .market-section{width:min(1180px,calc(100% - 40px));margin:0 auto 70px}.market-section h2{font-size:34px;letter-spacing:-.035em;margin:0 0 9px}.market-section>p{color:var(--muted);max-width:760px}
+    .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.feature{border:1px solid var(--line);border-radius:17px;padding:22px;background:rgba(255,255,255,.025)}.feature strong{display:block;font-size:16px;margin-bottom:5px}.feature span{color:var(--muted);font-size:13px}
+    .buyer-panel{display:grid;grid-template-columns:1fr 1fr;gap:14px}.buyer-panel>div{border:1px solid var(--line);border-radius:18px;padding:24px;background:rgba(18,26,45,.75)}.buyer-panel h3{margin-top:0}.buyer-panel p{color:var(--muted);font-size:13px}.sample{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;color:#d9e2f5;background:#0d1426;border:1px solid var(--line);border-radius:12px;padding:16px;overflow:auto}
+    .cta{border:1px solid var(--line);border-radius:22px;padding:35px;background:linear-gradient(145deg,rgba(157,124,255,.1),rgba(255,255,255,.025));display:flex;justify-content:space-between;gap:30px;align-items:center}.cta h2{margin:0 0 8px}.cta p{margin:0;color:var(--muted)}
+    @media(max-width:800px){.market-hero,.buyer-panel{grid-template-columns:1fr}.feature-grid{grid-template-columns:1fr}.market-hero{padding:55px 0 40px}.cta{flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">MJ</span><span><strong>ModelJudge</strong><small>AI Evaluation Lab</small></span></a>
+    <nav>
+      <a href="evaluate.html">Evaluate</a><a href="dashboard.html">Dataset Explorer</a><a href="releases.html">Dataset Releases</a><a href="buyer.html">Buyer Console</a><a href="api.html">API</a><a href="marketplace.html">Marketplace</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="market-hero">
+      <div>
+        <span class="eyebrow">DATASET MARKETPLACE</span>
+        <h1>Human preference data for <span>real AI evaluation workflows.</span></h1>
+        <p>ModelJudge AI turns structured human judgments into auditable, machine-readable evaluation records. Explore the current release, inspect quality evidence, and integrate verified data through the buyer API.</p>
+        <div class="market-actions"><a class="button primary" href="buyer.html">Open Buyer Console</a><a class="button secondary" href="api.html">Read API Docs</a><a class="button secondary" href="releases.html">Inspect Release</a></div>
+      </div>
+      <aside class="release-card">
+        <span class="live">CURRENT RELEASE</span>
+        <h2>v0.9.1</h2><p>Immutable human preference dataset</p>
+        <dl><div><dt>Records</dt><dd>5</dd></div><div><dt>Verified</dt><dd>5 / 5</dd></div><div><dt>Quality</dt><dd>4.25 / 5</dd></div><div><dt>Formats</dt><dd>JSONL + CSV</dd></div></dl>
+      </aside>
+    </section>
+
+    <section class="market-section">
+      <span class="eyebrow">WHAT BUYERS RECEIVE</span><h2>Evidence attached to every release.</h2><p>The current buyer workflow is designed around reproducibility: pin a release, inspect its manifest and quality evidence, download the selected format, and verify the published SHA-256 checksum.</p>
+      <div class="feature-grid">
+        <div class="feature"><strong>Human verification</strong><span>Current release contains 5 verified evaluation records.</span></div>
+        <div class="feature"><strong>Quality evidence</strong><span>Average quality score and reviewer-level statistics are exposed.</span></div>
+        <div class="feature"><strong>Immutable versions</strong><span>Release identifiers and checksums support reproducible consumption.</span></div>
+        <div class="feature"><strong>Machine-readable exports</strong><span>JSONL and CSV formats are available through the buyer API.</span></div>
+        <div class="feature"><strong>API authentication</strong><span>Buyer access uses scoped API keys with usage tracking.</span></div>
+        <div class="feature"><strong>Provenance signals</strong><span>Release metadata includes provenance and licensing guidance.</span></div>
+      </div>
+    </section>
+
+    <section class="market-section">
+      <span class="eyebrow">SAMPLE RECORD</span><h2>Structured for downstream pipelines.</h2><p>A ModelJudge record preserves the judgment context rather than reducing an evaluation to a single preference label.</p>
+      <div class="buyer-panel">
+        <div><h3>Evaluation record</h3><div class="sample">{
+  "prompt": "Compare two AI responses to a user request",
+  "preference": "A",
+  "scores": {
+    "accuracy": 5,
+    "relevance": 4,
+    "clarity": 4,
+    "helpfulness": 5
+  },
+  "human_rationale": "Response A is more complete and directly addresses the request.",
+  "verified": true
+}</div></div>
+        <div><h3>Built for buyers</h3><p><b>Recommended flow</b></p><p>1. List available releases.<br>2. Pin an exact release version.<br>3. Read manifest and quality evidence.<br>4. Download JSONL or CSV.<br>5. Verify SHA-256 before ingestion.<br>6. Retain the release manifest with your dataset copy.</p><a class="button secondary" href="api.html">View integration guide</a></div>
+      </div>
+    </section>
+
+    <section class="market-section"><div class="cta"><div><h2>Ready to inspect the dataset?</h2><p>Use the public release page for evidence or the authenticated console for buyer API access.</p></div><div class="market-actions"><a class="button primary" href="releases.html">View Release</a><a class="button secondary" href="buyer.html">Buyer Console</a></div></div></section>
+  </main>
+  <footer><span>ModelJudge AI</span><span>Advanced MVP · Production deployment</span></footer>
+</body>
+</html>
