@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: ./backend
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      DATABASE_URL: postgresql://modeljudge:modeljudge@db:5432/modeljudge
+      DATABASE_SSL: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: modeljudge
+      POSTGRES_PASSWORD: modeljudge
+      POSTGRES_DB: modeljudge
+    ports:
+      - "5432:5432"
+    volumes:
+      - modeljudge_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U modeljudge -d modeljudge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  modeljudge_data:
