@@ -6,8 +6,7 @@ async function insertEvaluation(record) {
 }
 
 async function listEvaluations(limit = 500) {
-  await db.query(`UPDATE evaluations e SET verified = TRUE WHERE e.verified IS DISTINCT FROM TRUE AND EXISTS (SELECT 1 FROM reviews r WHERE r.evaluation_id = e.id AND (LOWER(COALESCE(r.verification_action,'')) = 'approved' OR LOWER(COALESCE(r.reason,'')) LIKE 'reviewer approved:%'))`);
-  const result = await db.query(`SELECT e.*, CASE WHEN e.verified = TRUE OR EXISTS (SELECT 1 FROM reviews r WHERE r.evaluation_id = e.id AND (LOWER(COALESCE(r.verification_action,'')) = 'approved' OR LOWER(COALESCE(r.reason,'')) LIKE 'reviewer approved:%')) THEN TRUE ELSE FALSE END AS verified FROM evaluations e ORDER BY e.created_at DESC LIMIT $1`, [limit]);
+  const result = await db.query(`SELECT * FROM evaluations ORDER BY created_at DESC LIMIT $1`, [limit]);
   return result.rows;
 }
 
@@ -27,8 +26,23 @@ async function fingerprintExists(fingerprint) {
 }
 
 async function insertReview(review) {
-  await db.query(`INSERT INTO reviews (id,evaluation_id,reviewer_id,preferred_response,accuracy_a,accuracy_b,relevance_a,relevance_b,clarity_a,clarity_b,safety_a,safety_b,reason,confidence,fingerprint,created_at,verification_action) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`, [review.id,review.evaluation_id,review.reviewer_id,review.preferred_response,review.accuracy_a,review.accuracy_b,review.relevance_a,review.relevance_b,review.clarity_a,review.clarity_b,review.safety_a,review.safety_b,review.reason,review.confidence,review.fingerprint,review.created_at,review.verification_action || "pending"]);
-  return review;
+  const action = ["pending", "approved", "revision requested", "rejected"].includes(review.verification_action)
+    ? review.verification_action
+    : "pending";
+
+  return withTransaction(async (client) => {
+    const result = await client.query(`INSERT INTO reviews (id,evaluation_id,reviewer_id,preferred_response,accuracy_a,accuracy_b,relevance_a,relevance_b,clarity_a,clarity_b,safety_a,safety_b,reason,confidence,fingerprint,created_at,verification_action) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`, [review.id,review.evaluation_id,review.reviewer_id,review.preferred_response,review.accuracy_a,review.accuracy_b,review.relevance_a,review.relevance_b,review.clarity_a,review.clarity_b,review.safety_a,review.safety_b,review.reason,review.confidence,review.fingerprint,review.created_at,action]);
+
+    // Verification is driven only by the explicit persisted action.
+    // A pending/rejected/revision-requested review must never verify an evaluation.
+    if (action === "approved") {
+      await client.query("UPDATE evaluations SET verified = TRUE WHERE id = $1", [review.evaluation_id]);
+    } else if (action === "rejected" || action === "revision requested") {
+      await client.query(`UPDATE evaluations SET verified = FALSE WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM reviews WHERE evaluation_id = $1 AND verification_action = 'approved')`, [review.evaluation_id]);
+    }
+
+    return { ...result.rows[0], verification_action: action };
+  });
 }
 
 async function markEvaluationVerified(id, verified = true) {
@@ -52,8 +66,9 @@ async function reviewerStatsRows() {
 }
 
 async function withTransaction(work) {
-  const client = db.getPool().connect ? await db.getPool().connect() : null;
-  if (!client) throw new Error("PostgreSQL is not configured");
+  const pool = db.getPool();
+  if (!pool) throw new Error("PostgreSQL is not configured");
+  const client = await pool.connect();
   try {
     await client.query("BEGIN");
     const result = await work(client);
@@ -62,7 +77,9 @@ async function withTransaction(work) {
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
-  } finally { client.release(); }
+  } finally {
+    client.release();
+  }
 }
 
 module.exports = { insertEvaluation, listEvaluations, countEvaluations, findEvaluation, fingerprintExists, insertReview, markEvaluationVerified, listReviews, reviewFingerprintExists, reviewerStatsRows, withTransaction };
