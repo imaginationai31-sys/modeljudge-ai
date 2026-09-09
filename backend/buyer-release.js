@@ -38,7 +38,7 @@ async function writeReviewerQualityReport(destination, version, generatedAt) {
   return reviewerQuality;
 }
 
-async function ensureBuyerRelease(version = "0.9.1") {
+async function ensureBuyerRelease(version = "1.0.0") {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Invalid release version");
   const destination = path.join(RELEASES_DIR, `v${version}`);
   const datasetPath = path.join(destination, "evaluations.jsonl");
