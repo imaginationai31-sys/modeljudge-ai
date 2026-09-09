@@ -134,6 +134,53 @@ The API runs at `http://localhost:8787`.
 
 From the repository root, serve the frontend with `python -m http.server 8000` and open `http://localhost:8000/frontend/`.
 
+## Run with Docker
+
+Docker support is included for buyers and developers who want a reproducible local deployment with PostgreSQL.
+
+Requirements:
+- Docker Desktop or Docker Engine with Docker Compose
+- Git
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+The application will be available at:
+
+`http://localhost:8787`
+
+The Docker Compose stack starts:
+- ModelJudge AI Node.js/Express application
+- PostgreSQL 17 database
+- Persistent PostgreSQL volume
+- Application-to-database networking
+- Health-checked database startup
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+To stop the stack and remove the local database volume:
+
+```bash
+docker compose down -v
+```
+
+### Docker configuration
+
+The application container is defined in `backend/Dockerfile`.
+
+The PostgreSQL development stack is defined in `docker-compose.yml`.
+
+Environment configuration should be supplied through deployment secrets or environment variables. Do not commit real database credentials, reviewer credentials, admin bootstrap tokens, or buyer API keys.
+
+For production deployments, use a managed PostgreSQL service or secured PostgreSQL infrastructure with TLS, backups, restricted network access, monitoring, and a tested restore procedure.
+
 ## PostgreSQL mode
 
 JSONL is intended for local development. Configure `DATABASE_URL` for PostgreSQL-backed operation and run:
