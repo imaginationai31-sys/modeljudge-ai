@@ -4,6 +4,7 @@ Human preference and AI response evaluation platform for building structured mod
 
 > **Software asset:** ModelJudge AI is a deployable evaluation platform with human review, verification, calibration, quality controls, PostgreSQL storage, versioned releases, and an authenticated buyer API.
 
+**Current software version:** 1.0.0  
 **Live platform:** https://modeljudge-api.onrender.com  
 **Asset & technical overview:** [docs/ACQUISITION_OVERVIEW.md](docs/ACQUISITION_OVERVIEW.md)
 
@@ -52,6 +53,7 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 ## Buyer resources
 
 - `docs/ACQUISITION_OVERVIEW.md` — software-asset acquisition and technical overview
+- `docs/ASSET_TRANSFER.md` — buyer handover and production transfer checklist
 - `docs/TECHNICAL_ARCHITECTURE.md` — system architecture, data flow, security boundaries, deployment, and extension points
 - `docs/BUYER_ONBOARDING.md` — buyer workflow, data fields, verification, and security
 - `docs/API_QUICKSTART.md` — authenticated API examples
@@ -62,36 +64,10 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 - `docs/RELIABILITY.md` — reliability methodology
 - `docs/PRODUCTION_DEPLOYMENT.md` — production operations
 - `docs/SECURITY_HARDENING.md` — security controls
-
-## Project structure
-
-```text
-modeljudge-ai/
-├── frontend/
-├── backend/
-│   ├── server.js
-│   ├── auth.js
-│   ├── gold.js
-│   ├── buyer-api.js
-│   ├── buyer-management.js
-│   ├── security.js
-│   ├── *-engine.js
-│   ├── db*.js
-│   ├── storage*.js
-│   ├── migrations/
-│   └── package.json
-├── data/
-├── docs/
-├── scripts/
-├── tests/
-├── exports/
-├── releases/
-├── .github/workflows/
-├── README.md
-├── CONTRIBUTING.md
-├── SECURITY.md
-└── LICENSE
-```
+- `docs/DATA_PROVENANCE.md` — provenance and commercial-use guidance
+- `docs/THIRD_PARTY_LICENSES.md` — dependency/license review guidance
+- `docs/KNOWN_LIMITATIONS.md` — disclosed v1.0 limitations
+- `docs/CHANGELOG.md` — version history
 
 ## Automated tests & CI
 
@@ -103,6 +79,15 @@ Run the automated test suite:
 cd backend
 npm test
 ```
+
+Run the buyer-readiness gate from the repository root:
+
+```bash
+npm ci
+npm run verify
+```
+
+The verification command checks required buyer documentation, v1.0.0 version alignment, accidental root artifacts, automated tests, linting, and dataset validation. Full production verification still requires the buyer's PostgreSQL and deployment environment.
 
 Run the complete quality pipeline:
 
@@ -127,6 +112,13 @@ Buyers evaluating the software can reproduce the core quality checks from a clea
 ```bash
 git clone https://github.com/imaginationai31-sys/modeljudge-ai.git
 cd modeljudge-ai
+npm ci
+npm run verify
+```
+
+For the full backend quality pipeline:
+
+```bash
 cd backend
 npm ci
 npm run lint
@@ -140,7 +132,7 @@ npm run reviewer-control
 npm run certification
 ```
 
-These commands validate dependency installation, linting, production dependency security, automated tests, dataset validation, export generation, quality filtering, reliability reporting, reviewer controls, and certification-readiness reporting without requiring production credentials.
+These commands validate dependency installation, linting, production dependency security, automated tests, dataset validation, export generation, quality filtering, reliability reporting, reviewer controls, and certification-readiness reporting without requiring production credentials for the core checks.
 
 ## Run locally
 
@@ -238,7 +230,7 @@ Never expose buyer keys in frontend source code, URLs, public repositories, scre
 
 ## Data and provenance
 
-Sample records are illustrative. Before commercial distribution, review the provenance and licensing of every task, prompt, model response, annotation, and external source included in a release.
+Sample records are illustrative. Before commercial distribution, review the provenance and licensing of every task, prompt, model response, annotation, and external source included in a release. See `docs/DATA_PROVENANCE.md`.
 
 Quality metrics describe the evaluation process; they are not guarantees of universal factual correctness or proof that one model is objectively superior.
 
@@ -261,17 +253,20 @@ Quality metrics describe the evaluation process; they are not guarantees of univ
 - [x] Automated test suite
 - [x] GitHub Actions CI
 - [x] Buyer onboarding and demo documentation
-- [ ] Live production infrastructure configuration
+- [x] Asset transfer and provenance documentation
+- [x] Software license file
+- [x] Buyer-readiness verification command
 - [ ] Independent external dataset audit
 - [ ] Commercial licensing/provenance review for a real buyer dataset
+- [ ] Buyer-specific production infrastructure configuration
 
 ## Current status
 
-**Advanced MVP / buyer-ready software foundation.** The repository contains a serious evaluation-data platform foundation, but a live commercial deployment, production-scale dataset, independent audit, and final licensing/provenance review remain business and operational activities.
+**v1.0.0 — buyer-ready software foundation.** The repository is organized and documented for technical due diligence and transfer. The live demo and software are separate from any buyer-specific production infrastructure or commercial dataset. Production deployment, independent audit, and final dataset licensing/provenance review remain buyer/operator responsibilities.
 
 ## License
 
-MIT. See `LICENSE`. Dataset-specific commercial rights and third-party content rights must be reviewed separately.
+MIT for the software. See `LICENSE`. Dataset-specific commercial rights and third-party content rights must be reviewed separately.
 
 ## Contributing
 
