@@ -20,8 +20,8 @@ async function compute(reviewerId) {
   await ensureSchema();
   const c=await db.query("SELECT is_correct FROM calibration_attempts WHERE reviewer_id=$1 ORDER BY created_at ASC",[reviewerId]);
   const r=await db.query("SELECT id FROM reviews WHERE reviewer_id=$1",[reviewerId]);
-  const correct=c.rows.filter(x=>x.is_correct).length; let failures=0;
-  for(let i=c.rows.length-1;i>=0&&!c.rows[i].is_correct;i--) failures++;
+  const correct=c.rows.filter(x=>x.is_correct).length;
+
   const accuracy=c.rows.length?correct/c.rows.length:0; const consistency=r.rows.length>=2?1:r.rows.length===1?0.5:0;
   return calculateReviewerControl({reviewer_id:reviewerId,calibration_attempts:c.rows.length,calibration_accuracy:accuracy,consistency_score:consistency},policyFromEnv());
 }

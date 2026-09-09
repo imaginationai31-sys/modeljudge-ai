@@ -16,11 +16,17 @@
     "release": "node ../scripts/create-release.js",
     "buyer-key": "node ../scripts/create-buyer-key.js",
     "migrate": "node ../scripts/migrate.js",
-    "test": "node --experimental-test-coverage --test ../tests/*.test.js"
+    "test": "node --experimental-test-coverage --test ../tests/*.test.js",
+    "lint": "eslint ."
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "express": "^5.1.0",
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "eslint": "10.10.0"
   }
 }
