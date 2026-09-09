@@ -120,6 +120,28 @@ npm run release
 
 GitHub Actions runs tests and the dataset/quality pipeline on pushes to `main` and pull requests targeting `main`. Quality reports are uploaded as CI artifacts. Production deployment remains separately controlled by the deployment workflow and environment configuration.
 
+## Buyer validation from a fresh clone
+
+Buyers evaluating the software can reproduce the core quality checks from a clean checkout. From the repository root:
+
+```bash
+git clone https://github.com/imaginationai31-sys/modeljudge-ai.git
+cd modeljudge-ai
+cd backend
+npm ci
+npm run lint
+npm audit --omit=dev
+npm test
+npm run validate
+npm run export
+npm run filter
+npm run reliability
+npm run reviewer-control
+npm run certification
+```
+
+These commands validate dependency installation, linting, production dependency security, automated tests, dataset validation, export generation, quality filtering, reliability reporting, reviewer controls, and certification-readiness reporting without requiring production credentials.
+
 ## Run locally
 
 Requirements: Node.js 20 or newer.
