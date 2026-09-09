@@ -35,7 +35,7 @@ function syncVerifiedReviews() {
 }
 
 function ensureBuyerRelease() {
-  const script = `const {ensureBuyerRelease}=require('./backend/buyer-release'); ensureBuyerRelease('0.9.1').then(r=>{console.log('Buyer release:',JSON.stringify(r));process.exit(0)}).catch(e=>{console.error('Buyer release generation failed:',e);process.exit(1)})`;
+  const script = `const {ensureBuyerRelease}=require('./backend/buyer-release'); ensureBuyerRelease('1.0.0').then(r=>{console.log('Buyer release:',JSON.stringify(r));process.exit(0)}).catch(e=>{console.error('Buyer release generation failed:',e);process.exit(1)})`;
   const result = spawnSync(process.execPath, ["-e", script], { stdio: "inherit", env: process.env, cwd: path.join(__dirname, "..") });
   if (result.status !== 0) console.error("Buyer release generation reported a failure; API startup will continue.");
 }
