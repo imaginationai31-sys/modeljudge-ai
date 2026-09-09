@@ -39,7 +39,7 @@
       </div>
       <div class="hero-card">
         <div class="status-dot"></div>
-        <div><strong>MVP online</strong><span>Production evaluation workspace</span></div>
+        <div><strong>v1.0.0 online</strong><span>Buyer-ready evaluation workspace</span></div>
       </div>
     </section>
 
@@ -53,20 +53,20 @@
     <section class="buyer-ready" aria-labelledby="buyer-ready-title">
       <div class="buyer-ready-heading">
         <div>
-          <span class="eyebrow">BUYER-READY DATASET</span>
+          <span class="eyebrow">BUYER-READY SOFTWARE</span>
           <h2 id="buyer-ready-title">Verified human preference data, built for auditability.</h2>
           <p>Explore the current release with human verification, quality evidence, immutable versioning, and integrity checks designed for downstream AI evaluation and training workflows.</p>
         </div>
-        <div class="buyer-ready-badge">RELEASE v0.9.1</div>
+        <div class="buyer-ready-badge">RELEASE v1.0.0</div>
       </div>
       <div class="buyer-metrics">
-        <div><strong>5</strong><span>Human evaluations</span></div>
-        <div><strong>100%</strong><span>Human verified</span></div>
-        <div><strong>4.25/5</strong><span>Average quality</span></div>
-        <div><strong>v0.9.1</strong><span>Immutable release</span></div>
+        <div><strong id="verifiedEvaluations">—</strong><span>Human verified</span></div>
+        <div><strong id="verificationRate">—</strong><span>Verification rate</span></div>
+        <div><strong id="releaseVersion">v1.0.0</strong><span>Current release</span></div>
+        <div><strong>SHA-256</strong><span>Release integrity</span></div>
       </div>
       <div class="buyer-signals" aria-label="Dataset buyer signals">
-        <span>SHA-256 verified</span>
+        <span>Explicit verification</span>
         <span>JSONL + CSV</span>
         <span>Reviewer evidence</span>
         <span>Versioned releases</span>
@@ -94,10 +94,28 @@
     </section>
   </main>
 
-  <footer><span>ModelJudge AI</span><span>Advanced MVP · Production deployment</span></footer>
+  <footer><span>ModelJudge AI</span><span>v1.0.0 · Buyer-ready software foundation</span></footer>
   <script src="config.js"></script>
   <script>
-    async function loadHomeStats(){try{const r=await fetch(`${window.MODELJUDGE_API_URL}/evaluations?limit=1`);if(r.ok){const d=await r.json();document.getElementById('totalEvaluations').textContent=String(d.count??0)}}catch(e){}}
+    async function loadHomeStats(){
+      try{
+        const [evalResponse, releaseResponse] = await Promise.all([
+          fetch(`${window.MODELJUDGE_API_URL}/evaluations?limit=1`),
+          fetch(`${window.MODELJUDGE_API_URL}/release`)
+        ]);
+        if(evalResponse.ok){
+          const d=await evalResponse.json();
+          document.getElementById('totalEvaluations').textContent=String(d.count??0);
+        }
+        if(releaseResponse.ok){
+          const r=await releaseResponse.json();
+          const verified=Math.round((r.human_verification_rate??0)*100);
+          document.getElementById('verificationRate').textContent=`${verified}%`;
+          document.getElementById('verifiedEvaluations').textContent=String(Math.round((r.record_count??0)*(r.human_verification_rate??0)));
+          document.getElementById('releaseVersion').textContent=`v${r.version??'1.0.0'}`;
+        }
+      }catch(e){}
+    }
     loadHomeStats();
   </script>
 </body>
