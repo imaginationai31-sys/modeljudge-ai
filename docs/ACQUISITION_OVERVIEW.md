@@ -30,22 +30,11 @@ The project is positioned as a **software asset**, not as a standalone dataset s
 
 **Live application:** https://modeljudge-api.onrender.com
 
-**Current release:** v0.9.1
+**Current software version:** v1.0.0
 
-Current demonstration state:
+The live demonstration has successfully exercised the evaluation → pending verification → reviewer approval → verified workflow. The authoritative current counts should be read from the live API rather than copied into static marketing pages.
 
-| Signal | Current value |
-|---|---:|
-| Evaluations | 5 |
-| Human verified | 5 / 5 |
-| Verification rate | 100% |
-| Average quality | 4.25 / 5 |
-| Unique prompts | 5 |
-| Duplicate rate | 0% |
-| Release | v0.9.1 |
-| Export formats | JSONL + CSV |
-
-These figures describe the current demonstration dataset and are not a claim about production-scale data volume.
+Historical v0.9.1 references are retained where they describe the previous demonstration release.
 
 ## Core Platform Capabilities
 
@@ -55,7 +44,7 @@ Collect structured judgments across defined quality dimensions and evaluation ca
 
 ### Human Verification
 
-Reviewer actions can approve, reject, or request revision. Approved verification actions synchronize with evaluation verification state and feed release-quality reporting.
+Reviewer actions can approve, reject, or request revision. Verification state is explicit and is not inferred from free-form reviewer reason text.
 
 ### Calibration
 
@@ -111,7 +100,7 @@ Releases are versioned and immutable. Release manifests contain record counts, f
 
 ## Technology Stack
 
-- **Runtime:** Node.js
+- **Runtime:** Node.js 20+
 - **Backend:** Express
 - **Database:** PostgreSQL
 - **Frontend:** HTML, CSS, JavaScript
@@ -166,11 +155,11 @@ See [API Quickstart](API_QUICKSTART.md) and [Buyer API](BUYER_API.md).
 
 The application is designed to run as a web service with PostgreSQL persistence. Startup performs database migrations and application diagnostics before serving the application.
 
-See [Production Deployment](PRODUCTION_DEPLOYMENT.md) for the deployment workflow and required environment configuration.
+See [Production Deployment](PRODUCTION_DEPLOYMENT.md) and [Asset Transfer](ASSET_TRANSFER.md) for deployment and handover requirements.
 
 ## Security Foundation
 
-The repository includes documented security practices around buyer API authentication, scoped access, API-key handling, rate limits, usage logging, and release integrity.
+The repository includes documented security practices around buyer API authentication, scoped access, API-key handling, rate limits, usage logging, release integrity, reviewer authentication, and explicit verification state.
 
 Real production secrets must be supplied by the operator through the deployment environment. API keys should never be committed to the repository or exposed in public client-side code.
 
@@ -187,6 +176,10 @@ See [Security Hardening](SECURITY_HARDENING.md).
 - [Demo Guide](DEMO_GUIDE.md)
 - [Production Deployment](PRODUCTION_DEPLOYMENT.md)
 - [Security Hardening](SECURITY_HARDENING.md)
+- [Asset Transfer](ASSET_TRANSFER.md)
+- [Data Provenance](DATA_PROVENANCE.md)
+- [Known Limitations](KNOWN_LIMITATIONS.md)
+- [Third-Party Licenses](THIRD_PARTY_LICENSES.md)
 
 ## Expansion Opportunities
 
@@ -206,7 +199,7 @@ An acquirer can extend the existing foundation with features such as:
 
 ## Current Maturity
 
-**Status: Advanced MVP / buyer-ready software foundation.**
+**Status: v1.0.0 — buyer-ready software foundation.**
 
 The live deployment demonstrates the core evaluation, verification, release, and buyer API workflows. The project should not be interpreted as independently audited enterprise software or as evidence of production-scale dataset volume.
 
