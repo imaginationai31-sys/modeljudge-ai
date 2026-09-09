@@ -51,26 +51,32 @@ async function listReviews(evaluationId) {
   const reviews = await reviewsJsonl.read();
   return evaluationId ? reviews.filter(r => r.evaluation_id === evaluationId) : reviews.slice(-500).reverse();
 }
-function resolveVerificationAction(review) {
-  if (["approved", "revision requested", "rejected"].includes(review.verification_action)) return review.verification_action;
-  const reason = String(review.reason || "").trim().toLowerCase();
-  if (reason.startsWith("reviewer approved:")) return "approved";
-  if (reason.startsWith("reviewer revision requested:")) return "revision requested";
-  if (reason.startsWith("reviewer rejected:")) return "rejected";
-  return "pending";
+
+// Verification state is explicit. Never infer it from free-form reason text.
+function normalizeVerificationAction(value) {
+  return ["pending", "approved", "revision requested", "rejected"].includes(value) ? value : "pending";
 }
+
 async function insertReview(review) {
-  const persistedReview = { ...review, verification_action: resolveVerificationAction(review) };
-  if (mode() === "postgres") await pgStore.insertReview(persistedReview);
-  else await reviewsJsonl.append(persistedReview);
+  const persistedReview = { ...review, verification_action: normalizeVerificationAction(review.verification_action) };
+  if (mode() === "postgres") return pgStore.insertReview(persistedReview);
+  await reviewsJsonl.append(persistedReview);
   if (persistedReview.verification_action === "approved") await markEvaluationVerified(persistedReview.evaluation_id, true);
+  else if (["rejected", "revision requested"].includes(persistedReview.verification_action)) {
+    const reviews = await listReviews(persistedReview.evaluation_id);
+    if (!reviews.some(r => r.verification_action === "approved")) await markEvaluationVerified(persistedReview.evaluation_id, false);
+  }
   return persistedReview;
 }
+
+// Kept as a compatibility helper for existing callers. It is intentionally
+// read-only so GET endpoints cannot mutate verification state.
 async function syncApprovedReviews() {
   if (mode() !== "postgres") return { checked: 0, verified: 0 };
-  const result = await db.query(`UPDATE evaluations e SET verified = TRUE FROM reviews r WHERE r.evaluation_id = e.id AND (LOWER(COALESCE(r.verification_action,'')) = 'approved' OR LOWER(COALESCE(r.reason,'')) LIKE 'reviewer approved:%') AND e.verified IS DISTINCT FROM TRUE RETURNING e.id`);
-  return { checked: result.rowCount, verified: result.rowCount };
+  const result = await db.query("SELECT COUNT(*)::int AS count FROM reviews WHERE verification_action = 'approved'");
+  return { checked: result.rows[0].count, verified: 0 };
 }
+
 async function reviewerStatsRows() {
   if (mode() === "postgres") {
     const result = await db.query(`SELECT reviewer_id, COUNT(*)::int AS review_count, AVG((accuracy_a + accuracy_b + relevance_a + relevance_b + clarity_a + clarity_b + safety_a + safety_b)::numeric / 8) AS average_score, AVG(CASE WHEN preferred_response = 'Tie' THEN 1.0 ELSE 0.0 END) AS tie_rate FROM reviews GROUP BY reviewer_id ORDER BY average_score DESC, review_count DESC`);
