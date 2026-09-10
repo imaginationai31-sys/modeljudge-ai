@@ -12,11 +12,14 @@ function request(method, pathname, body) {
     method,
     headers: body ? { "content-type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined
-  }).then(async response => ({
-    status: response.status,
-    headers: response.headers,
-    body: await response.json()
-  }));
+  }).then(async response => {
+    const text = await response.text();
+    let parsed = null;
+    if (text) {
+      try { parsed = JSON.parse(text); } catch { parsed = { raw: text }; }
+    }
+    return { status: response.status, headers: response.headers, body: parsed };
+  });
 }
 
 async function waitForServer(timeoutMs = 15000) {
@@ -34,7 +37,7 @@ async function waitForServer(timeoutMs = 15000) {
 function validEvaluation(id = `IT-${Date.now()}`) {
   return {
     id,
-    prompt: "Integration test prompt",
+    prompt: `Integration test prompt ${id}`,
     response_a: "A complete answer with useful detail.",
     response_b: "Another complete answer with useful detail.",
     preferred_response: "A",
@@ -130,10 +133,10 @@ test("reviews endpoint returns a collection", async () => {
   assert.ok(Array.isArray(result.body.reviews));
 });
 
-test("review submission requires authentication", async () => {
+test("review submission requires authenticated PostgreSQL mode", async () => {
   const result = await request("POST", "/api/reviews", {});
-  assert.equal(result.status, 401);
-  assert.equal(typeof result.body.error, "string");
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error, "Authentication requires PostgreSQL");
 });
 
 test("consensus endpoint returns an evaluation-scoped result", async () => {
@@ -169,6 +172,7 @@ test("CORS preflight is handled without invoking application routes", async () =
   const result = await request("OPTIONS", "/api/evaluations");
   assert.equal(result.status, 204);
   assert.ok(result.headers.get("access-control-allow-methods"));
+  assert.equal(result.body, null);
 });
 
 test("unknown API routes return JSON 404 responses", async () => {
