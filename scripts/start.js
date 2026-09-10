@@ -61,7 +61,23 @@ backend.on("error", error => {
 function proxyApi(req, res) {
   const headers = { ...req.headers, host: `127.0.0.1:${BACKEND_PORT}` };
   const options = { hostname: "127.0.0.1", port: BACKEND_PORT, path: req.originalUrl, method: req.method, headers };
-  const proxy = http.request(options, backendRes => { res.writeHead(backendRes.statusCode || 502, backendRes.headers); backendRes.pipe(res); });
+  const proxy = http.request(options, backendRes => {
+    if (backendRes.statusCode === 404) {
+      let body = "";
+      backendRes.setEncoding("utf8");
+      backendRes.on("data", chunk => { body += chunk; });
+      backendRes.on("end", () => {
+        if (body.trim().startsWith("<!DOCTYPE") || body.trim().startsWith("<html")) {
+          return res.status(404).json({ error: "Not found" });
+        }
+        res.writeHead(404, backendRes.headers);
+        res.end(body);
+      });
+      return;
+    }
+    res.writeHead(backendRes.statusCode || 502, backendRes.headers);
+    backendRes.pipe(res);
+  });
   proxy.on("error", error => {
     captureException(error, { source: "api_proxy", request_id: req.requestId, path: req.path });
     logger.error("api_proxy_error", { request_id: req.requestId, error: error.message });
