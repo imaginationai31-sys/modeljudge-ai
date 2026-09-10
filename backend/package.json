@@ -17,8 +17,9 @@
     "buyer-key": "node ../scripts/create-buyer-key.js",
     "migrate": "node ../scripts/migrate.js",
     "test": "node --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=60 --test-coverage-statements=60 --test-coverage-branches=50 --test ../tests/*.test.js",
-    "test:unit": "node --test ../tests/*.test.js --test-name-pattern='^(?!.*HTTP API integration)'",
+    "test:unit": "node --test ../tests/*.test.js --test-name-pattern='^(?!.*HTTP API integration|.*PostgreSQL)$'",
     "test:integration": "node --test ../tests/api.integration.test.js",
+    "test:postgres": "node --test ../tests/postgres.integration.test.js",
     "test:coverage": "node --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=60 --test-coverage-statements=60 --test-coverage-branches=50 --test ../tests/*.test.js",
     "lint": "eslint ."
   },
