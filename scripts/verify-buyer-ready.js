@@ -18,6 +18,8 @@ const required = [
   'docs/CERTIFICATION.md',
   'docs/RELIABILITY.md',
   'docs/PRODUCTION_DEPLOYMENT.md',
+  'docs/PRODUCTION_READINESS.md',
+  'docs/OBSERVABILITY.md',
   'docs/SECURITY_HARDENING.md',
   'docs/ASSET_TRANSFER.md',
   'docs/DATA_PROVENANCE.md',
