@@ -4,10 +4,13 @@ const { spawn, spawnSync } = require("child_process");
 const express = require("../backend/node_modules/express");
 const db = require("../backend/db");
 const { logger, requestLogger } = require("../backend/logger");
+const { captureException, installProcessHandlers } = require("../backend/error-tracker");
 
 const PUBLIC_PORT = Number(process.env.PORT || 10000);
 const BACKEND_PORT = 8787;
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
+
+installProcessHandlers();
 
 function runMigrations() {
   if (!db.isConfigured()) {
@@ -50,6 +53,7 @@ logger.info("api_starting", { backend_port: BACKEND_PORT });
 const backendEnv = { ...process.env, PORT: String(BACKEND_PORT) };
 const backend = spawn(process.execPath, [path.join(__dirname, "..", "backend", "server.js")], { stdio: "inherit", env: backendEnv });
 backend.on("error", error => {
+  captureException(error, { source: "backend_process" });
   logger.error("api_process_start_failed", { error: error.message });
   process.exit(1);
 });
@@ -59,6 +63,7 @@ function proxyApi(req, res) {
   const options = { hostname: "127.0.0.1", port: BACKEND_PORT, path: req.originalUrl, method: req.method, headers };
   const proxy = http.request(options, backendRes => { res.writeHead(backendRes.statusCode || 502, backendRes.headers); backendRes.pipe(res); });
   proxy.on("error", error => {
+    captureException(error, { source: "api_proxy", request_id: req.requestId, path: req.path });
     logger.error("api_proxy_error", { request_id: req.requestId, error: error.message });
     if (!res.headersSent) res.status(502).json({ error: "API unavailable" }); else res.end();
   });
