@@ -70,51 +70,36 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 - `docs/KNOWN_LIMITATIONS.md` — disclosed v1.0 limitations
 - `docs/CHANGELOG.md` — version history
 
-## Automated tests & CI
+## Fresh-clone buyer verification
 
-The repository contains Node.js test coverage for core evaluation components, including calibration, quality filtering, reliability reporting, reviewer quality control, reviewer behavior, HTTP API flows, and PostgreSQL-backed persistence/authentication flows.
-
-Run the automated test suite:
-
-```bash
-cd backend
-npm test
-```
-
-Run the buyer-readiness gate from the repository root:
-
-```bash
-npm ci
-npm run verify
-```
-
-The verification command checks required buyer documentation, v1.0.0 version alignment, accidental root artifacts, automated tests, linting, and dataset validation. Full production verification still requires the buyer's PostgreSQL and deployment environment.
-
-Run the complete quality pipeline:
-
-```bash
-cd backend
-npm test
-npm run validate
-npm run export
-npm run filter
-npm run reliability
-npm run reviewer-control
-npm run certification
-npm run release
-```
-
-GitHub Actions runs unit, HTTP API, and PostgreSQL-backed integration tests plus the dataset/quality pipeline on pushes to `main` and pull requests targeting `main`. Quality reports and coverage data are uploaded as CI artifacts. Production deployment remains separately controlled by the deployment workflow and environment configuration.
-
-## Buyer validation from a fresh clone
-
-Buyers evaluating the software can reproduce the core quality checks from a clean checkout. From the repository root:
+A buyer should be able to verify the core software from an empty directory using only Node.js 20+ and Git.
 
 ```bash
 git clone https://github.com/imaginationai31-sys/modeljudge-ai.git
 cd modeljudge-ai
 npm ci
-npm run verify
+npm run build
+npm test
+```
+
+The canonical commands are:
+
+- `npm ci` — installs the locked root dependencies reproducibly.
+- `npm run build` — runs the buyer-readiness build/verification gate.
+- `npm test` — runs the project's automated backend test suite.
+
+The backend also has its own lockfile and package scripts for the full quality pipeline. The commands below provide deeper verification when required.
+
+## Automated tests & CI
+
+The repository contains Node.js test coverage for core evaluation components, including calibration, quality filtering, reliability reporting, reviewer quality control, reviewer behavior, HTTP API flows, and PostgreSQL-backed persistence/authentication flows.
+
+From the repository root:
+
+```bash
+npm ci
+npm run build
+npm test
 ```
 
 For the full backend quality pipeline:
@@ -131,9 +116,12 @@ npm run filter
 npm run reliability
 npm run reviewer-control
 npm run certification
+npm run release
 ```
 
-These commands validate dependency installation, linting, production dependency security, automated tests, dataset validation, export generation, quality filtering, reliability reporting, reviewer controls, and certification-readiness reporting without requiring production credentials for the core checks.
+The buyer-readiness verification command checks required buyer documentation, v1.0.0 version alignment, accidental root artifacts, automated tests, linting, and dataset validation. Full production verification still requires the buyer's PostgreSQL and deployment environment.
+
+GitHub Actions runs the same canonical root `npm ci`, `npm run build`, and `npm test` commands on pushes to `main` and pull requests targeting `main`, followed by explicit HTTP API and PostgreSQL-backed integration tests and the dataset/quality pipeline. Quality reports and coverage data are uploaded as CI artifacts. Production deployment remains separately controlled by the deployment workflow and environment configuration.
 
 ## Run locally
 
