@@ -12,6 +12,8 @@ permissions:
 jobs:
   test-and-validate:
     runs-on: ubuntu-latest
+    env:
+      NODE_V8_COVERAGE: coverage
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -28,9 +30,19 @@ jobs:
       - name: Audit production dependencies
         working-directory: backend
         run: npm audit --omit=dev
-      - name: Run tests
+      - name: Run unit and integration tests with enforced coverage
         working-directory: backend
         run: npm test
+      - name: Run API integration suite explicitly
+        working-directory: backend
+        run: npm run test:integration
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: modeljudge-coverage
+          path: backend/coverage/
+          if-no-files-found: warn
       - name: Validate dataset
         working-directory: backend
         run: npm run validate
