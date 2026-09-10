@@ -217,6 +217,20 @@ Production buyer access requires PostgreSQL and a buyer API key. Keys are hashed
 
 Never expose buyer keys in frontend source code, URLs, public repositories, screenshots, or support tickets.
 
+## Security
+
+ModelJudge AI includes security guidance and a threat model covering session signing, secret management, trust boundaries, and vulnerability disclosure.
+
+See the full [Security Policy](SECURITY.md).
+
+### Production SECRET_KEY
+
+Production deployments **must** set a strong, unique, unpredictable `SECRET_KEY`.
+
+The development/default key documented in `src/flask/config.py` is provided for development purposes only and **must never be used in production**.
+
+Never commit production secrets, database credentials, API keys, or other sensitive configuration to the repository.
+
 ## Data and provenance
 
 Sample records are illustrative. Before commercial distribution, review the provenance and licensing of every task, prompt, model response, annotation, and external source included in a release. See `docs/DATA_PROVENANCE.md`.
