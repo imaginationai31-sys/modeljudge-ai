@@ -14,6 +14,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_V8_COVERAGE: coverage
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: modeljudge
+          POSTGRES_PASSWORD: modeljudge
+          POSTGRES_DB: modeljudge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U modeljudge -d modeljudge_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,12 +44,25 @@ jobs:
       - name: Audit production dependencies
         working-directory: backend
         run: npm audit --omit=dev
-      - name: Run unit and integration tests with enforced coverage
+      - name: Run unit and JSONL/API integration tests with enforced coverage
         working-directory: backend
         run: npm test
       - name: Run API integration suite explicitly
         working-directory: backend
         run: npm run test:integration
+      - name: Prepare PostgreSQL integration database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://modeljudge:modeljudge@localhost:5432/modeljudge_test
+          DATABASE_SSL: "false"
+        run: npm run migrate
+      - name: Run PostgreSQL-backed integration suite
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://modeljudge:modeljudge@localhost:5432/modeljudge_test
+          DATABASE_SSL: "false"
+          ADMIN_BOOTSTRAP_TOKEN: ci-postgres-bootstrap-token
+        run: npm run test:postgres
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v5
