@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "ModelJudge AI evaluation and dataset platform",
+  "workspaces": [
+    "backend"
+  ],
   "scripts": {
     "start": "node scripts/start.js",
     "build": "node scripts/verify-buyer-ready.js",
-    "test": "npm --prefix backend test",
+    "test": "npm --workspace backend test",
     "validate": "node scripts/validate-dataset.js",
     "verify": "node scripts/verify-buyer-ready.js"
   },
