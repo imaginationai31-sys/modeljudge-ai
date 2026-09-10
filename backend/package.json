@@ -16,7 +16,10 @@
     "release": "node ../scripts/create-release.js",
     "buyer-key": "node ../scripts/create-buyer-key.js",
     "migrate": "node ../scripts/migrate.js",
-    "test": "node --experimental-test-coverage --test ../tests/*.test.js",
+    "test": "node --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=60 --test-coverage-statements=60 --test-coverage-branches=50 --test ../tests/*.test.js",
+    "test:unit": "node --test ../tests/*.test.js --test-name-pattern='^(?!.*HTTP API integration)'",
+    "test:integration": "node --test ../tests/api.integration.test.js",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=60 --test-coverage-functions=60 --test-coverage-statements=60 --test-coverage-branches=50 --test ../tests/*.test.js",
     "lint": "eslint ."
   },
   "engines": {
