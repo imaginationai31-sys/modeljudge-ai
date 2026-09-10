@@ -5,7 +5,8 @@
   "description": "ModelJudge AI evaluation and dataset platform",
   "scripts": {
     "start": "node scripts/start.js",
-    "test": "node --test tests/*.test.js",
+    "build": "node scripts/verify-buyer-ready.js",
+    "test": "npm --prefix backend test",
     "validate": "node scripts/validate-dataset.js",
     "verify": "node scripts/verify-buyer-ready.js"
   },
