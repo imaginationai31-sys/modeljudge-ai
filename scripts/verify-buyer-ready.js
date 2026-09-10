@@ -4,31 +4,16 @@ const { spawnSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
 const required = [
-  'README.md',
-  'LICENSE',
-  'SECURITY.md',
-  'CONTRIBUTING.md',
-  'docs/ACQUISITION_OVERVIEW.md',
-  'docs/TECHNICAL_ARCHITECTURE.md',
-  'docs/BUYER_ONBOARDING.md',
-  'docs/API_QUICKSTART.md',
-  'docs/BUYER_API.md',
-  'docs/DEMO_GUIDE.md',
-  'docs/BUYER_RELEASES.md',
-  'docs/CERTIFICATION.md',
-  'docs/RELIABILITY.md',
-  'docs/PRODUCTION_DEPLOYMENT.md',
-  'docs/PRODUCTION_READINESS.md',
-  'docs/OBSERVABILITY.md',
-  'docs/SECURITY_HARDENING.md',
-  'docs/ASSET_TRANSFER.md',
-  'docs/DATA_PROVENANCE.md',
-  'docs/KNOWN_LIMITATIONS.md',
-  'docs/THIRD_PARTY_LICENSES.md',
-  'docs/CHANGELOG.md',
-  'backend/package.json',
-  'backend/.env.example',
-  'docker-compose.yml'
+  'README.md', 'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md',
+  'docs/ACQUISITION_OVERVIEW.md', 'docs/TECHNICAL_ARCHITECTURE.md',
+  'docs/BUYER_ONBOARDING.md', 'docs/API_QUICKSTART.md', 'docs/BUYER_API.md',
+  'docs/DEMO_GUIDE.md', 'docs/BUYER_RELEASES.md', 'docs/CERTIFICATION.md',
+  'docs/RELIABILITY.md', 'docs/PRODUCTION_DEPLOYMENT.md',
+  'docs/PRODUCTION_READINESS.md', 'docs/OBSERVABILITY.md',
+  'docs/SECURITY_HARDENING.md', 'docs/ASSET_TRANSFER.md',
+  'docs/DATA_PROVENANCE.md', 'docs/KNOWN_LIMITATIONS.md',
+  'docs/THIRD_PARTY_LICENSES.md', 'docs/CHANGELOG.md',
+  'backend/package.json', 'backend/.env.example', 'docker-compose.yml'
 ];
 
 let failed = false;
@@ -67,9 +52,10 @@ function run(command, args) {
   if (result.status !== 0) failed = true;
 }
 
-run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['--prefix', 'backend', 'test']);
-run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['--prefix', 'backend', 'lint']);
-run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['--prefix', 'backend', 'validate']);
+const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+run(npm, ['--prefix', 'backend', 'run', 'test:unit']);
+run(npm, ['--prefix', 'backend', 'run', 'lint']);
+run(npm, ['--prefix', 'backend', 'run', 'validate']);
 
 console.log('\n======================================');
 console.log(failed ? 'STATUS: NOT READY — fix the failed checks above.' : 'STATUS: BUYER READY — repository checks passed.');
