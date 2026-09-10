@@ -39,7 +39,15 @@ function agreementScore(values) {
 }
 
 function buildConsensus(reviews) {
-  if (!reviews.length) return { status: "insufficient", reviewer_count: 0 };
+  if (!reviews.length) return {
+    status: "insufficient",
+    reviewer_count: 0,
+    consensus_preference: null,
+    agreement_score: null,
+    dimension_agreement: {},
+    unanimous: false,
+    quality_flag: "insufficient"
+  };
   const preferenceValues = reviews.map(r => r.preferred_response);
   const consensus = majority(preferenceValues);
   const agreement = agreementScore(preferenceValues);
