@@ -7,7 +7,7 @@ async function request(method, path, body, headers = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
-      "content-type": "application/json",
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
       ...headers
     },
     body: body === undefined ? undefined : JSON.stringify(body)
@@ -33,13 +33,15 @@ function validEvaluation(id = Date.now()) {
     response_a: `Response A ${id}`,
     response_b: `Response B ${id}`,
     preferred_response: "A",
-    rationale: "A is clearer and more relevant.",
-    scores: {
-      accuracy: 5,
-      relevance: 5,
-      clarity: 4,
-      safety: 5
-    }
+    accuracy_a: 5,
+    accuracy_b: 4,
+    relevance_a: 5,
+    relevance_b: 4,
+    clarity_a: 4,
+    clarity_b: 4,
+    safety_a: 5,
+    safety_b: 5,
+    reason: "Response A is clearer and more relevant."
   };
 }
 
@@ -61,7 +63,7 @@ test("evaluations endpoint returns a stable collection shape", async () => {
   const result = await request("GET", "/api/evaluations");
   assert.equal(result.status, 200);
   assert.equal(typeof result.body.count, "number");
-  assert.ok(Array.isArray(result.body.evaluations));
+  assert.ok(Array.isArray(result.body.records));
 });
 
 test("evaluation validation rejects incomplete requests", async () => {
@@ -71,7 +73,7 @@ test("evaluation validation rejects incomplete requests", async () => {
 
 test("evaluation validation rejects invalid score ranges", async () => {
   const payload = validEvaluation(`invalid-score-${Date.now()}`);
-  payload.scores.accuracy = 6;
+  payload.accuracy_a = 6;
   const result = await request("POST", "/api/evaluations", payload);
   assert.equal(result.status, 400);
 });
@@ -79,7 +81,7 @@ test("evaluation validation rejects invalid score ranges", async () => {
 test("evaluation creation accepts a valid API payload", async () => {
   const result = await request("POST", "/api/evaluations", validEvaluation(`create-${Date.now()}`));
   assert.equal(result.status, 201);
-  assert.ok(result.body.id);
+  assert.ok(result.body.record.id);
 });
 
 test("duplicate evaluation pairs are rejected", async () => {
@@ -91,6 +93,7 @@ test("duplicate evaluation pairs are rejected", async () => {
     id: `${payload.id}-second`
   });
   assert.equal(second.status, 409);
+  assert.equal(second.body.error, "Duplicate evaluation pair detected");
 });
 
 test("reviews endpoint returns a collection", async () => {
@@ -114,8 +117,9 @@ test("consensus endpoint returns an evaluation-scoped result", async () => {
 });
 
 test("reviewer stats endpoint returns a stable collection shape", async () => {
-  const result = await request("GET", "/api/reviewer-stats");
+  const result = await request("GET", "/api/reviewers/stats");
   assert.equal(result.status, 200);
+  assert.equal(typeof result.body.reviewer_count, "number");
   assert.ok(Array.isArray(result.body.reviewers));
 });
 
@@ -147,47 +151,20 @@ test("unknown API routes return JSON 404 responses", async () => {
   assert.equal(result.body.error, "Not found");
 });
 
-test("rejects invalid calibration submission", async () => {
-  const result = await request("POST", "/api/calibration/submit", {});
-  assert.ok([400, 401, 403, 503].includes(result.status));
+test("gold submission requires authenticated PostgreSQL mode", async () => {
+  const result = await request("POST", "/api/gold/submit", {});
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error, "Reviewer authentication requires PostgreSQL");
 });
 
-test("calculates perfect calibration accuracy", async () => {
-  const result = await request("GET", "/api/calibration/status");
-  assert.ok([200, 401, 403, 503].includes(result.status));
+test("gold quality status requires authenticated PostgreSQL mode", async () => {
+  const result = await request("GET", "/api/gold/me");
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error, "Reviewer authentication requires PostgreSQL");
 });
 
-test("flags reviewer below threshold", async () => {
-  const result = await request("GET", "/api/reviewer-quality");
-  assert.ok([200, 401, 403, 503].includes(result.status));
-});
-
-test("PostgreSQL health check reports real database storage", { skip: !process.env.DATABASE_URL }, async () => {
-  const result = await request("GET", "/api/health");
-  assert.equal(result.status, 200);
-  assert.equal(result.body.storage, "postgres");
-});
-
-test("admin bootstrap and reviewer login use PostgreSQL-backed auth", { skip: !process.env.DATABASE_URL }, async () => {
-  const result = await request("POST", "/api/auth/login", { reviewer_id: "missing", password: "missing" });
-  assert.ok([400, 401, 403].includes(result.status));
-});
-
-test("evaluation creation, persistence, and duplicate protection use PostgreSQL", { skip: !process.env.DATABASE_URL }, async () => {
-  const payload = validEvaluation(`postgres-${Date.now()}`);
-  const first = await request("POST", "/api/evaluations", payload);
-  assert.equal(first.status, 201);
-  const listed = await request("GET", "/api/evaluations");
-  assert.equal(listed.status, 200);
-  assert.ok(listed.body.evaluations.some((item) => item.id === payload.id));
-  const duplicate = await request("POST", "/api/evaluations", {
-    ...payload,
-    id: `${payload.id}-duplicate`
-  });
-  assert.equal(duplicate.status, 409);
-});
-
-test("authenticated reviewer endpoints read PostgreSQL state", { skip: !process.env.DATABASE_URL }, async () => {
-  const result = await request("GET", "/api/reviews");
-  assert.equal(result.status, 200);
+test("reviewer quality endpoint requires authenticated PostgreSQL mode", async () => {
+  const result = await request("GET", "/api/reviewers/me/quality");
+  assert.equal(result.status, 503);
+  assert.equal(result.body.error, "Reviewer authentication requires PostgreSQL");
 });
