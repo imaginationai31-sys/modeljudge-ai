@@ -23,14 +23,6 @@ function runMigrations() {
   if (result.status !== 0) process.exit(result.status || 1);
 }
 
-function runCalibrationDiagnostic() {
-  if (!db.isConfigured()) return;
-  logger.info("calibration_diagnostic_start");
-  const result = spawnSync(process.execPath, [path.join(__dirname, "diagnose-calibration.js")], { stdio: "inherit", env: process.env });
-  if (result.error) logger.error("calibration_diagnostic_start_failed", { error: result.error.message });
-  if (result.status !== 0) logger.warn("calibration_diagnostic_reported_failure", { exit_code: result.status });
-}
-
 function syncVerifiedReviews() {
   if (!db.isConfigured()) return;
   const script = `const store=require('./backend/storage-adapter'); store.syncApprovedReviews().then(r=>{console.log('Verified-review sync:',JSON.stringify(r));process.exit(0)}).catch(e=>{console.error('Verified-review sync failed:',e);process.exit(1)})`;
@@ -45,7 +37,6 @@ function ensureBuyerRelease() {
 }
 
 runMigrations();
-runCalibrationDiagnostic();
 syncVerifiedReviews();
 ensureBuyerRelease();
 logger.info("api_starting", { backend_port: BACKEND_PORT });
