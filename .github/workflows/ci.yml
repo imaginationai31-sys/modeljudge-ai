@@ -35,18 +35,23 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Install dependencies
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install backend dependencies
         working-directory: backend
         run: npm ci
+      - name: Run canonical build command
+        run: npm run build
+      - name: Run canonical test command
+        run: npm test
       - name: Run ESLint
         working-directory: backend
         run: npm run lint
       - name: Audit production dependencies
         working-directory: backend
         run: npm audit --omit=dev
-      - name: Run unit tests with enforced coverage
-        working-directory: backend
-        run: npm test
       - name: Start API integration server
         working-directory: backend
         run: |
