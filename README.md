@@ -63,6 +63,7 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 - `docs/CERTIFICATION.md` — certification-readiness methodology
 - `docs/RELIABILITY.md` — reliability methodology
 - `docs/PRODUCTION_DEPLOYMENT.md` — production operations
+- `docs/PRODUCTION_READINESS.md` — production readiness matrix, operational boundaries, and buyer handover checklist
 - `docs/SECURITY_HARDENING.md` — security controls
 - `docs/DATA_PROVENANCE.md` — provenance and commercial-use guidance
 - `docs/THIRD_PARTY_LICENSES.md` — dependency/license review guidance
@@ -71,7 +72,7 @@ Versioned release → SHA-256 manifest → Authenticated buyer access
 
 ## Automated tests & CI
 
-The repository contains Node.js test coverage for core evaluation components, including calibration, quality filtering, reliability reporting, reviewer quality control, and reviewer behavior.
+The repository contains Node.js test coverage for core evaluation components, including calibration, quality filtering, reliability reporting, reviewer quality control, reviewer behavior, HTTP API flows, and PostgreSQL-backed persistence/authentication flows.
 
 Run the automated test suite:
 
@@ -103,7 +104,7 @@ npm run certification
 npm run release
 ```
 
-GitHub Actions runs tests and the dataset/quality pipeline on pushes to `main` and pull requests targeting `main`. Quality reports are uploaded as CI artifacts. Production deployment remains separately controlled by the deployment workflow and environment configuration.
+GitHub Actions runs unit, HTTP API, and PostgreSQL-backed integration tests plus the dataset/quality pipeline on pushes to `main` and pull requests targeting `main`. Quality reports and coverage data are uploaded as CI artifacts. Production deployment remains separately controlled by the deployment workflow and environment configuration.
 
 ## Buyer validation from a fresh clone
 
@@ -204,7 +205,7 @@ cd backend
 npm run migrate
 ```
 
-Production should use TLS, restricted database access, backups, monitoring, and a tested restore procedure.
+Production should use TLS, restricted database access, backups, monitoring, and a tested restore procedure. See `docs/PRODUCTION_READINESS.md` for the complete operational handover checklist.
 
 ## Quality pipeline
 
