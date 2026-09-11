@@ -4,7 +4,7 @@
 
 ModelJudge AI handles evaluation prompts, model responses, user/session data, and database-backed evaluation records. Security-sensitive configuration must be supplied through protected environment variables or secret-management systems and must never be committed to the repository.
 
-## Threat Model and Trust Boundaries
+## Trust Boundaries
 
 The primary trust boundaries are:
 
@@ -13,8 +13,8 @@ The primary trust boundaries are:
    - User-controlled input must be validated before security-sensitive processing or database operations.
 
 2. **Application → Session Signing**
-   - Flask sessions rely on `itsdangerous` signing.
-   - The Flask `SECRET_KEY` is a security boundary.
+   - Session state is protected by the application's signing mechanism.
+   - The configured `SECRET_KEY` is a security boundary for signed session data.
    - Anyone who obtains the production `SECRET_KEY` may be able to forge valid signed session data.
 
 3. **Application → Database**
@@ -28,9 +28,9 @@ The primary trust boundaries are:
 
 ## SECRET_KEY
 
-Flask session signing depends on `SECRET_KEY`.
+Session signing depends on `SECRET_KEY`.
 
-The Flask configuration contains a documented development/default key (`src/flask/config.py`, line 66). **This development/default key must never be used in production.**
+The motivating example for this policy is the documented development/default key in `src/flask/config.py`. That development/default value is for development only and **must never be used in production**.
 
 Production deployments must provide a strong, unique, unpredictable `SECRET_KEY` through a secure environment variable or secret-management system.
 
@@ -58,7 +58,7 @@ When rotating the key:
 4. Verify authentication and session behavior.
 5. Treat the previous key as compromised if exposure is suspected.
 
-Changing `SECRET_KEY` can invalidate existing signed Flask sessions, requiring users to authenticate again.
+Changing `SECRET_KEY` can invalidate existing signed sessions, requiring users to authenticate again.
 
 ## Data Safety
 
@@ -73,7 +73,7 @@ Production logs should not expose credentials, session secrets, database credent
 Before deploying ModelJudge AI to production:
 
 - Set a unique production `SECRET_KEY`.
-- Never use the Flask development/default key.
+- Never use the development/default key.
 - Keep database credentials outside source control.
 - Keep API credentials outside source control.
 - Use HTTPS for production traffic.
@@ -81,7 +81,7 @@ Before deploying ModelJudge AI to production:
 - Review logs for accidental secret exposure.
 - Keep dependencies updated and monitor security advisories.
 
-## Reporting a Vulnerability
+## Vulnerability Disclosure
 
 Please do not publish credentials, API keys, private data, or exploitable security details in public issues.
 

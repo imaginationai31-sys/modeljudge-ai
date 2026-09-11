@@ -231,7 +231,7 @@ See the full [Security Policy](SECURITY.md).
 
 Production deployments **must** set a strong, unique, unpredictable `SECRET_KEY`.
 
-The development/default key documented in `src/flask/config.py` is provided for development purposes only and **must never be used in production**.
+The development/default key documented in `src/flask/config.py` is the motivating example for this requirement: it is provided for development purposes only and **must never be used in production**. See `SECURITY.md` for trust boundaries, rotation guidance, and vulnerability disclosure procedures.
 
 Never commit production secrets, database credentials, API keys, or other sensitive configuration to the repository.
 
