@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://modeljudge-ai.example/schema/evaluation.schema.json",
+  "$id": "https://github.com/imaginationai31-sys/modeljudge-ai/blob/main/data/schemas/evaluation.schema.json",
   "title": "ModelJudge AI Evaluation Record",
   "type": "object",
   "additionalProperties": false,
