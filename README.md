@@ -78,6 +78,9 @@ A buyer should be able to verify the core software from an empty directory using
 git clone https://github.com/imaginationai31-sys/modeljudge-ai.git
 cd modeljudge-ai
 npm ci
+cd backend
+npm ci
+cd ..
 npm run build
 npm test
 ```
@@ -85,6 +88,7 @@ npm test
 The canonical commands are:
 
 - `npm ci` — installs the locked root dependencies reproducibly.
+- `cd backend && npm ci` — installs the locked backend dependencies reproducibly.
 - `npm run build` — runs the buyer-readiness build/verification gate.
 - `npm test` — runs the project's automated backend test suite.
 
