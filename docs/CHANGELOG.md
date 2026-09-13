@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.1] — Security Hardening
+
+### Security
+
+- Added `THREAT_MODEL.md` covering assets, trust boundaries, threat actors, STRIDE analysis, mitigations, and production assumptions.
+- Removed obsolete production-dangerous/default `SECRET_KEY` references from the Node.js application documentation.
+- Replaced fixed credential-like integration-test fixtures with runtime-generated secrets.
+- Added root and backend production dependency audits to GitHub Actions with a high-severity failure threshold.
+- Documented formal server-side request-validation requirements in `docs/REQUEST_VALIDATION.md`.
+- Updated `SECURITY.md` to reference the threat model and request-validation controls.
+
+### CI
+
+- PostgreSQL integration tests now generate their bootstrap token at runtime instead of storing a fixed token in workflow configuration.
+- Dependency auditing is performed for both the root and backend package sets.
+
 ## [1.0.0] — 2026-09-10
 
 ### Added
