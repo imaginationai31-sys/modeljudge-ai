@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const PORT = 18081;
@@ -22,8 +23,8 @@ function request(method, pathname, body, headers = {}) {
 
 const evaluationId = `PG-IT-${Date.now()}`;
 const reviewerId = `pg-reviewer-${Date.now()}`;
-const password = "PostgresIntegration!2026";
-const bootstrapToken = process.env.ADMIN_BOOTSTRAP_TOKEN || "ci-postgres-bootstrap-token";
+const password = crypto.randomBytes(24).toString("base64url");
+const bootstrapToken = process.env.ADMIN_BOOTSTRAP_TOKEN || crypto.randomBytes(32).toString("base64url");
 
 function validEvaluation(id = evaluationId) {
   return {
