@@ -223,17 +223,15 @@ Never expose buyer keys in frontend source code, URLs, public repositories, scre
 
 ## Security
 
-ModelJudge AI includes security guidance and a threat model covering session signing, secret management, trust boundaries, and vulnerability disclosure.
+ModelJudge AI includes security guidance and a threat model covering authentication, token handling, secret management, trust boundaries, and vulnerability disclosure.
 
 See the full [Security Policy](SECURITY.md).
 
-### Production SECRET_KEY
+### Secret management
 
-Production deployments **must** set a strong, unique, unpredictable `SECRET_KEY`.
+The application does not require or ship with a default `SECRET_KEY`. Reviewer sessions use cryptographically random, database-backed bearer tokens, and production secrets must be supplied through protected environment variables or a deployment secret-management system.
 
-The development/default key documented in `src/flask/config.py` is the motivating example for this requirement: it is provided for development purposes only and **must never be used in production**. See `SECURITY.md` for trust boundaries, rotation guidance, and vulnerability disclosure procedures.
-
-Never commit production secrets, database credentials, API keys, or other sensitive configuration to the repository.
+Never commit production secrets, database credentials, API keys, authentication tokens, or other sensitive configuration to the repository.
 
 ## Data and provenance
 
@@ -258,23 +256,3 @@ Quality metrics describe the evaluation process; they are not guarantees of univ
 - [x] Security hardening
 - [x] Production deployment workflow
 - [x] Automated test suite
-- [x] GitHub Actions CI
-- [x] Buyer onboarding and demo documentation
-- [x] Asset transfer and provenance documentation
-- [x] Software license file
-- [x] Buyer-readiness verification command
-- [ ] Independent external dataset audit
-- [ ] Commercial licensing/provenance review for a real buyer dataset
-- [ ] Buyer-specific production infrastructure configuration
-
-## Current status
-
-**v1.0.0 — buyer-ready software foundation.** The repository is organized and documented for technical due diligence and transfer. The live demo and software are separate from any buyer-specific production infrastructure or commercial dataset. Production deployment, independent audit, and final dataset licensing/provenance review remain buyer/operator responsibilities.
-
-## License
-
-MIT for the software. See `LICENSE`. Dataset-specific commercial rights and third-party content rights must be reviewed separately.
-
-## Contributing
-
-See `CONTRIBUTING.md` for contribution and dataset-quality expectations.
