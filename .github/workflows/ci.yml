@@ -38,9 +38,14 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install root dependencies
         run: npm ci
+      - name: Audit root dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
+      - name: Audit backend production dependencies
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
       - name: Run canonical build command
         run: npm run build
       - name: Run canonical test command
@@ -48,9 +53,6 @@ jobs:
       - name: Run ESLint
         working-directory: backend
         run: npm run lint
-      - name: Audit production dependencies
-        working-directory: backend
-        run: npm audit --omit=dev
       - name: Start API integration server
         working-directory: backend
         run: |
@@ -78,8 +80,9 @@ jobs:
         env:
           DATABASE_URL: postgresql://modeljudge:modeljudge@localhost:5432/modeljudge_test
           DATABASE_SSL: "false"
-          ADMIN_BOOTSTRAP_TOKEN: ci-postgres-bootstrap-token
-        run: npm run test:postgres
+        run: |
+          export ADMIN_BOOTSTRAP_TOKEN="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64url"))')"
+          npm run test:postgres
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v5
