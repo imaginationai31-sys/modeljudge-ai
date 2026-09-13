@@ -12,10 +12,11 @@ The primary trust boundaries are:
    - Browser requests and submitted evaluation data are untrusted.
    - User-controlled input must be validated before security-sensitive processing or database operations.
 
-2. **Application → Session Signing**
-   - Session state is protected by the application's signing mechanism.
-   - The configured `SECRET_KEY` is a security boundary for signed session data.
-   - Anyone who obtains the production `SECRET_KEY` may be able to forge valid signed session data.
+2. **Application → Authentication Session Store**
+   - Reviewer sessions use cryptographically random bearer tokens.
+   - Only a SHA-256 hash of the session token is stored in PostgreSQL.
+   - Tokens are time-limited and can be explicitly revoked.
+   - Authentication secrets and tokens must never be committed to the repository.
 
 3. **Application → Database**
    - Database credentials and connection information are trusted application secrets.
@@ -26,43 +27,33 @@ The primary trust boundaries are:
    - CI/CD systems may have access to deployment credentials and application secrets.
    - These values must be stored using protected repository or deployment secrets rather than source files.
 
-## SECRET_KEY
+## Secret Management
 
-Session signing depends on `SECRET_KEY`.
+The current Node.js application does not require or ship with a default `SECRET_KEY`. Reviewer authentication uses cryptographically random session tokens stored as SHA-256 hashes in PostgreSQL.
 
-The motivating example for this policy is the documented development/default key in `src/flask/config.py`. That development/default value is for development only and **must never be used in production**.
-
-Production deployments must provide a strong, unique, unpredictable `SECRET_KEY` through a secure environment variable or secret-management system.
+Production secrets and credentials must be supplied through secure environment variables or a deployment secret-management system.
 
 Never:
 
-- Commit a production `SECRET_KEY` to Git.
-- Use the documented development/default key in production.
+- Commit production secrets to Git.
 - Hard-code production secrets in application source code.
 - Share secrets in issues, pull requests, logs, screenshots, or public documentation.
+- Place authentication tokens or buyer API keys in frontend source code or URLs.
 
-## SECRET_KEY Rotation
+## Authentication Token Rotation
 
-Rotate the production `SECRET_KEY` when:
+Rotate or revoke authentication credentials when:
 
-- The existing key may have been exposed.
-- An unauthorized person may have obtained access to the key.
+- A token or secret may have been exposed.
+- An unauthorized person may have obtained access to credentials.
 - A deployment environment has been compromised.
-- Access to the production secret needs to be revoked.
+- Access to the affected credential needs to be revoked.
 
-When rotating the key:
-
-1. Generate a new cryptographically secure random value.
-2. Store it in the production secret-management system.
-3. Deploy the new value.
-4. Verify authentication and session behavior.
-5. Treat the previous key as compromised if exposure is suspected.
-
-Changing `SECRET_KEY` can invalidate existing signed sessions, requiring users to authenticate again.
+For compromised reviewer sessions, revoke the affected session and require a new login. For exposed deployment secrets, generate a new cryptographically secure value, store it in the production secret-management system, deploy the new value, and verify authentication and application behavior.
 
 ## Data Safety
 
-Never commit secrets, credentials, API keys, or private user data.
+Never commit secrets, credentials, API keys, authentication tokens, or private user data.
 
 Treat evaluation prompts and model outputs as potentially sensitive unless their provenance and redistribution rights are clear.
 
@@ -72,31 +63,12 @@ Production logs should not expose credentials, session secrets, database credent
 
 Before deploying ModelJudge AI to production:
 
-- Set a unique production `SECRET_KEY`.
-- Never use the development/default key.
+- Do not rely on a default or hard-coded `SECRET_KEY`.
 - Keep database credentials outside source control.
 - Keep API credentials outside source control.
+- Keep reviewer/admin bootstrap credentials outside source control.
 - Use HTTPS for production traffic.
 - Restrict access to CI/CD and deployment secrets.
-- Review logs for accidental secret exposure.
-- Keep dependencies updated and monitor security advisories.
-
-## Vulnerability Disclosure
-
-Please do not publish credentials, API keys, private data, or exploitable security details in public issues.
-
-Open a private security report through the repository's available GitHub security reporting features when enabled. If those features are unavailable, contact the maintainer privately through GitHub before disclosure.
-
-When reporting a vulnerability, please include:
-
-- A concise description of the vulnerability.
-- The affected component, endpoint, or file.
-- Steps required to reproduce the issue.
-- Potential security impact.
-- Suggested mitigation, if available.
-
-Please do not include real credentials, production secrets, or unnecessary personal information in a report.
-
-## Scope
-
-This policy describes security expectations for the ModelJudge AI repository. Deployers are also responsible for securing their hosting environment, infrastructure, databases, networks, credentials, and third-party services.
+- Use strong reviewer passwords.
+- Review authentication and authorization behavior after deployment.
+- Rotate or revoke credentials when exposure is suspected.
