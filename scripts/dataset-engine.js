@@ -2,7 +2,6 @@
 
 const fs = require("fs/promises");
 const path = require("path");
-const { buildRelease } = require("../backend/release-engine");
 
 const DATA_FILE = path.join(__dirname, "..", "data", "evaluations.jsonl");
 const EXPORT_DIR = path.join(__dirname, "..", "exports");
@@ -79,9 +78,7 @@ async function main() {
   const generatedAt = new Date().toISOString();
   const report = { generated_at: generatedAt, ...metrics(records) };
   await writeExports(records, report);
-
-  const release = await buildRelease(DATASET_VERSION, { record_count: records.length });
-  console.log(JSON.stringify({ ...report, release }, null, 2));
+  console.log(JSON.stringify(report, null, 2));
 }
 
 main().catch(error => { console.error(error); process.exit(1); });
