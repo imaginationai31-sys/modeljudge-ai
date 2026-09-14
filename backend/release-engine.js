@@ -24,10 +24,10 @@ async function sha256(file) {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-async function existingFiles() {
+async function existingFiles(exportDir = EXPORT_DIR) {
   const result = [];
   for (const name of RELEASE_FILES) {
-    const file = path.join(EXPORT_DIR, name);
+    const file = path.join(exportDir, name);
     try {
       const stat = await fs.stat(file);
       if (stat.isFile()) result.push({ name, path: file, bytes: stat.size });
@@ -39,9 +39,12 @@ async function existingFiles() {
 async function buildRelease(version, options = {}) {
   if (!/^v?\d+\.\d+\.\d+$/.test(version)) throw new Error("version must use semantic versioning, e.g. 0.9.0");
   const normalized = version.startsWith("v") ? version : `v${version}`;
-  const destination = path.join(RELEASES_DIR, normalized);
+  const rootDir = options.root_dir || ROOT;
+  const exportDir = path.join(rootDir, "exports");
+  const releasesDir = path.join(rootDir, "releases");
+  const destination = path.join(releasesDir, normalized);
   try { await fs.access(destination); throw new Error(`release ${normalized} already exists; releases are immutable`); } catch (error) { if (error.code !== "ENOENT") throw error; }
-  const files = await existingFiles();
+  const files = await existingFiles(exportDir);
   if (!files.some(f => f.name === "evaluations.jsonl")) throw new Error("evaluations.jsonl is missing; run npm run export first");
   await fs.mkdir(destination, { recursive: true });
   const checksums = {};
@@ -66,7 +69,7 @@ async function buildRelease(version, options = {}) {
   await fs.writeFile(path.join(destination, "RELEASE-MANIFEST.json"), JSON.stringify(manifest, null, 2) + "\n");
   await fs.writeFile(path.join(destination, "BUYER-README.md"), `# ModelJudge AI ${normalized}\n\nThis directory is an immutable dataset release snapshot.\n\n## Verify files\n\nCompare each file's SHA-256 digest with \`RELEASE-MANIFEST.json\`.\n\n## Contents\n\n- \`evaluations.jsonl\`: primary machine-readable dataset\n- \`evaluations.csv\`: convenience tabular export\n- \`quality-filtered.jsonl\`: quality-filtered subset when generated\n- quality, reliability, reviewer-control and certification reports\n- \`manifest.json\`: pipeline metadata\n\n## Commercial-use note\n\nThis repository does not by itself grant rights to third-party source material or evaluator contributions. Confirm provenance, consent, licensing, and contractual terms before redistribution or commercial use.\n`);
   const latest = { release_version: normalized, release_path: `releases/${normalized}`, generated_at: generatedAt, immutable: true };
-  await fs.writeFile(path.join(RELEASES_DIR, "LATEST.json"), JSON.stringify(latest, null, 2) + "\n");
+  await fs.writeFile(path.join(releasesDir, "LATEST.json"), JSON.stringify(latest, null, 2) + "\n");
   return manifest;
 }
 
