@@ -4,7 +4,6 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const EXPORT_DIR = path.join(ROOT, "exports");
-const RELEASES_DIR = path.join(ROOT, "releases");
 
 const RELEASE_FILES = [
   "evaluations.jsonl",
