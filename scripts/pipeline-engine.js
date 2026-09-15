@@ -72,8 +72,8 @@ async function runPipeline(options = {}) {
   const previous = await readState(stateFile);
 
   if (previous && previous.input_sha256 === inputFingerprint && previous.config_sha256 === configFingerprint) {
-    const outputsExist = (previous.outputs || []).every(async output => Boolean(await fileHash(path.join(rootDir, output.path))));
-    if (await Promise.all(outputsExist).then(results => results.every(Boolean))) {
+    const outputChecks = await Promise.all((previous.outputs || []).map(output => fileHash(path.join(rootDir, output.path))));
+    if (outputChecks.length > 0 && outputChecks.every(Boolean)) {
       return { ...previous, status: "skipped", reason: "identical input and configuration" };
     }
   }
