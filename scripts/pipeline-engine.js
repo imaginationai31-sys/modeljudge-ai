@@ -18,6 +18,16 @@ const BASE_STAGES = [
   { name: "certification", command: "certification-report.js", outputs: ["exports/certification-report.json"] }
 ];
 
+function pipelineStages(releaseVersion = process.env.PIPELINE_RELEASE_VERSION) {
+  if (!releaseVersion) return BASE_STAGES;
+  return [...BASE_STAGES, {
+    name: "release",
+    command: "create-release.js",
+    args: [releaseVersion],
+    outputs: [`releases/v${releaseVersion}/RELEASE-MANIFEST.json`, `releases/v${releaseVersion}/BUYER-README.md`]
+  }];
+}
+
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
@@ -50,7 +60,7 @@ async function writeState(stateFile, state) {
 }
 
 function defaultExecutor(stage, rootDir) {
-  return execFileAsync(process.execPath, [path.join(rootDir, "scripts", stage.command)], {
+  return execFileAsync(process.execPath, [path.join(rootDir, "scripts", stage.command), ...(stage.args || [])], {
     cwd: rootDir,
     env: process.env,
     maxBuffer: 10 * 1024 * 1024
@@ -60,13 +70,13 @@ function defaultExecutor(stage, rootDir) {
 async function runPipeline(options = {}) {
   const rootDir = options.rootDir || ROOT_DIR;
   const stateFile = options.stateFile || path.join(rootDir, ".pipeline", "pipeline-manifest.json");
-  const stages = options.stages || BASE_STAGES;
+  const stages = options.stages || pipelineStages(options.releaseVersion);
   const executor = options.executeStage || defaultExecutor;
   const inputFingerprint = options.inputFingerprint || await fingerprintInput(rootDir);
   const config = {
     dataset_version: process.env.DATASET_VERSION || "1.0.0",
-    release_version: process.env.PIPELINE_RELEASE_VERSION || null,
-    stages: stages.map(stage => stage.name)
+    release_version: options.releaseVersion || process.env.PIPELINE_RELEASE_VERSION || null,
+    stages: stages.map(stage => ({ name: stage.name, command: stage.command, args: stage.args || [] }))
   };
   const configFingerprint = sha256(JSON.stringify(config));
   const previous = await readState(stateFile);
@@ -146,4 +156,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { BASE_STAGES, fileHash, fingerprintInput, runPipeline, sha256 };
+module.exports = { BASE_STAGES, pipelineStages, fileHash, fingerprintInput, runPipeline, sha256 };
