@@ -8,9 +8,6 @@ const { promisify } = require("util");
 
 const execFileAsync = promisify(execFile);
 const ROOT_DIR = path.join(__dirname, "..");
-const DATA_FILE = path.join(ROOT_DIR, "data", "evaluations.jsonl");
-const STATE_DIR = path.join(ROOT_DIR, ".pipeline");
-const STATE_FILE = path.join(STATE_DIR, "pipeline-manifest.json");
 
 const BASE_STAGES = [
   { name: "validate", command: "validate-dataset.js", outputs: [] },
@@ -75,9 +72,9 @@ async function runPipeline(options = {}) {
   const previous = await readState(stateFile);
 
   if (previous && previous.input_sha256 === inputFingerprint && previous.config_sha256 === configFingerprint) {
-    const outputsExist = (previous.outputs || []).every(output => output && output.sha256);
-    if (outputsExist) {
-      return { ...previous, run_id: previous.run_id, status: "skipped", reason: "identical input and configuration" };
+    const outputsExist = (previous.outputs || []).every(async output => Boolean(await fileHash(path.join(rootDir, output.path))));
+    if (await Promise.all(outputsExist).then(results => results.every(Boolean))) {
+      return { ...previous, status: "skipped", reason: "identical input and configuration" };
     }
   }
 
