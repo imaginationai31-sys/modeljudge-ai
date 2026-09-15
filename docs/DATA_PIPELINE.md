@@ -21,10 +21,12 @@ RELIABILITY ANALYSIS
   ↓
 REVIEWER / CALIBRATION CONTROLS
   ↓
-RELEASE EXPORT
+RELEASE EXPORT (optional)
   ↓
 MANIFEST + SHA-256 VERIFICATION
 ```
+
+The executable orchestration layer is `scripts/pipeline-engine.js`. It runs the dataset stages in a fixed order, records stage status and duration, fingerprints the source dataset, records output SHA-256 hashes and supports safe skipping of an already-completed run with identical input/configuration. An immutable release is included when `PIPELINE_RELEASE_VERSION` is supplied.
 
 ### 1. Ingest
 
@@ -66,7 +68,11 @@ Release manifests identify the dataset, release version, record count, provenanc
 
 ## Reproducibility and idempotency
 
-Pipeline stages are designed to be safe to rerun when their output paths are regenerated. Validation, filtering, reliability reporting, and export calculations derive their outputs from explicit input files rather than hidden mutable state.
+`pipeline-engine.js` stores a local run manifest under `.pipeline/pipeline-manifest.json`. The state directory is ignored by Git and is intended as local/CI execution state, not buyer dataset content.
+
+A completed pipeline is considered safely repeatable when the source dataset fingerprint and pipeline configuration fingerprint are unchanged and all recorded outputs still exist. In that case, the engine reports `skipped` instead of executing the stages again. If an output is missing, the pipeline reruns rather than incorrectly treating the previous run as complete.
+
+The engine records a unique run ID, stage ordering, execution duration, input SHA-256, configuration SHA-256, output paths, output hashes, byte counts, and failure information. This provides lightweight lineage without introducing an external orchestration platform.
 
 Immutable release creation intentionally behaves differently: attempting to create the same release version twice fails instead of replacing an existing artifact. This prevents accidental mutation of a buyer-facing release.
 
@@ -75,6 +81,18 @@ For a new release, use a new semantic version and regenerate the pipeline artifa
 ## Canonical commands
 
 From the repository root:
+
+```bash
+npm --prefix backend run pipeline
+```
+
+To run the complete pipeline and create a new immutable release:
+
+```bash
+PIPELINE_RELEASE_VERSION=1.0.0 npm --prefix backend run pipeline
+```
+
+The individual stage commands remain available for debugging or targeted development:
 
 ```bash
 npm run validate
@@ -86,7 +104,7 @@ npm --prefix backend run certification
 node scripts/create-release.js 1.0.0
 ```
 
-The exact available artifacts depend on the source data and configured reviewer/database inputs. CI runs validation, export/filter/reliability/control/certification checks so failures are visible before release packaging.
+The exact available artifacts depend on the source data and configured reviewer/database inputs. CI continues to run the underlying validation, export/filter/reliability/control/certification checks before buyer quality artifacts are uploaded.
 
 ## Quality gate policy
 
