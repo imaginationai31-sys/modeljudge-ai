@@ -50,6 +50,9 @@ jobs:
         run: npm run build
       - name: Run canonical test command
         run: npm test
+      - name: Run coverage command explicitly
+        working-directory: backend
+        run: npm run test:coverage
       - name: Run ESLint
         working-directory: backend
         run: npm run lint
