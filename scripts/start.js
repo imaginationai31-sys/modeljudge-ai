@@ -85,7 +85,16 @@ app.use(express.static(FRONTEND_DIR, { extensions: ["html"] }));
 app.get("/", (req, res) => res.sendFile(path.join(FRONTEND_DIR, "index.html")));
 app.use((req, res) => { if (req.method === "GET" && !req.path.startsWith("/api/")) return res.sendFile(path.join(FRONTEND_DIR, "index.html")); res.status(404).json({ error: "Not found" }); });
 const publicServer = app.listen(PUBLIC_PORT, "0.0.0.0", () => logger.info("public_service_listening", { port: PUBLIC_PORT }));
-function shutdown(signal) { logger.info("service_shutdown", { signal }); publicServer.close(() => process.exit(0)); if (!backend.killed) backend.kill(signal); }
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info("service_shutdown", { signal });
+  if (!backend.killed) backend.kill(signal);
+  await new Promise(resolve => publicServer.close(() => resolve()));
+  await db.close();
+  process.exit(0);
+}
 backend.on("exit", (code, signal) => { if (signal) return shutdown("SIGTERM"); if (code !== 0) { logger.error("api_process_exited", { exit_code: code }); shutdown("SIGTERM"); } });
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => { shutdown("SIGTERM").catch(error => { captureException(error, { source: "shutdown" }); process.exit(1); }); });
+process.on("SIGINT", () => { shutdown("SIGINT").catch(error => { captureException(error, { source: "shutdown" }); process.exit(1); }); });
