@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs/promises");
 const os = require("os");
 const path = require("path");
-const { runPipeline, sha256 } = require("../scripts/pipeline-engine");
+const { pipelineStages, runPipeline, sha256 } = require("../scripts/pipeline-engine");
 
 async function makeRoot() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "modeljudge-pipeline-"));
@@ -11,6 +11,12 @@ async function makeRoot() {
   await fs.writeFile(path.join(root, "data", "evaluations.jsonl"), '{"id":"MJ-TEST-001"}\n');
   return root;
 }
+
+test("pipeline stages include an optional immutable release stage", () => {
+  assert.equal(pipelineStages("1.2.3").at(-1).name, "release");
+  assert.deepEqual(pipelineStages("1.2.3").at(-1).args, ["1.2.3"]);
+  assert.equal(pipelineStages().at(-1).name, "certification");
+});
 
 test("pipeline runs stages in order and records deterministic output hashes", async () => {
   const root = await makeRoot();
@@ -69,6 +75,29 @@ test("identical input and configuration skips a completed pipeline", async () =>
     assert.equal(second.status, "skipped");
     assert.equal(second.reason, "identical input and configuration");
     assert.equal(executions, 1);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test("pipeline reruns when a required output is missing", async () => {
+  const root = await makeRoot();
+  const stateFile = path.join(root, ".pipeline", "pipeline-manifest.json");
+  let executions = 0;
+  const stages = [{ name: "export", command: "dataset-engine.js", outputs: ["exports/evaluations.jsonl"] }];
+  try {
+    const executeStage = async stage => {
+      executions++;
+      const file = path.join(root, stage.outputs[0]);
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, "stable\n");
+    };
+    await runPipeline({ rootDir: root, stateFile, inputFingerprint: "same-input", stages, executeStage, runId: "first" });
+    await fs.rm(path.join(root, "exports", "evaluations.jsonl"));
+    const rerun = await runPipeline({ rootDir: root, stateFile, inputFingerprint: "same-input", stages, executeStage, runId: "second" });
+
+    assert.equal(rerun.status, "passed");
+    assert.equal(executions, 2);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
