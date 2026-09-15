@@ -5,8 +5,15 @@ const pool = process.env.DATABASE_URL ? new Pool({
   ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
   max: Number(process.env.DATABASE_POOL_MAX) || 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000
+  connectionTimeoutMillis: 5000,
+  allowExitOnIdle: true
 }) : null;
+
+if (pool) {
+  pool.on("error", error => {
+    console.error("Unexpected PostgreSQL pool error:", error);
+  });
+}
 
 function isConfigured() { return Boolean(pool); }
 function getPool() { if (!pool) throw new Error("DATABASE_URL is not configured"); return pool; }
