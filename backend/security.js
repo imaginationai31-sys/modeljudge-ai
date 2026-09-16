@@ -1,7 +1,9 @@
 const crypto = require("crypto");
+const { getConfig } = require("./config");
 
-const WINDOW_MS = Number(process.env.SECURITY_RATE_WINDOW_MS) || 60_000;
-const MAX_REQUESTS = Number(process.env.SECURITY_RATE_MAX_REQUESTS) || 120;
+const config = getConfig();
+const WINDOW_MS = config.securityRateWindowMs;
+const MAX_REQUESTS = config.securityRateMaxRequests;
 const buckets = new Map();
 
 function clientKey(req) {
@@ -31,7 +33,7 @@ function securityHeaders(req, res, next) {
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
-  if (process.env.NODE_ENV === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  if (config.nodeEnv === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   next();
 }
 
