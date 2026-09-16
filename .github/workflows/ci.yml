@@ -46,6 +46,8 @@ jobs:
       - name: Audit backend production dependencies
         working-directory: backend
         run: npm audit --omit=dev --audit-level=high
+      - name: Check environment manifest
+        run: npm run check-env
       - name: Run canonical build command
         run: npm run build
       - name: Run canonical test command
