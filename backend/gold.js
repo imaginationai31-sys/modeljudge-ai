@@ -2,17 +2,18 @@ const crypto = require("crypto");
 const fs = require("fs/promises");
 const path = require("path");
 const db = require("./db");
+const { getConfig } = require("./config");
 
 const DEFAULT_GOLD_FILE = path.join(__dirname, "..", "data", "gold", "gold-evaluations.jsonl");
+const config = getConfig();
 let calibrationSchemaReady = false;
 
 function goldFile() {
-  const configured = process.env.GOLD_TASKS_FILE;
-  return configured || DEFAULT_GOLD_FILE;
+  return config.goldTasksFile || DEFAULT_GOLD_FILE;
 }
 
 async function loadGoldTasks() {
-  const configured = process.env.GOLD_TASKS_FILE;
+  const configured = config.goldTasksFile;
   const candidate = goldFile();
   try {
     const text = await fs.readFile(candidate, "utf8");
@@ -106,7 +107,7 @@ async function reviewerQuality(reviewerId) {
   }
   const count = rows.length;
   const correct = rows.filter(r => r.is_correct).length;
-  return { reviewer_id: reviewerId, calibration_attempts: count, correct, accuracy: count ? Number((correct / count).toFixed(5)) : null, status: count < 3 ? "insufficient" : correct / count >= 0.8 ? "pass" : "review" };
+  return { reviewer_id: reviewerId, calibration_attempts: count, correct, accuracy: count ? Number((correct / count).toFixed(5)) : null, status: count < config.reviewerMinCalibrationAttempts ? "insufficient" : correct / count >= config.reviewerPassCalibrationAccuracy ? "pass" : "review" };
 }
 
 module.exports = { loadGoldTasks, publicTask, getTask, validateSubmission, submit, reviewerQuality, pickTask, ensureCalibrationSchema };
