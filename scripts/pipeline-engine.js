@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 const ROOT_DIR = path.join(__dirname, "..");
 
 const BASE_STAGES = [
+  { name: "quality-gate", command: "data-quality-gate.js", outputs: [] },
   { name: "validate", command: "validate-dataset.js", outputs: [] },
   { name: "export", command: "dataset-engine.js", outputs: ["exports/evaluations.jsonl", "exports/evaluations.csv", "exports/manifest.json", "exports/quality-report.json"] },
   { name: "filter", command: "quality-filter.js", outputs: ["exports/quality-filtered.jsonl", "exports/quality-filter-report.json"] },
