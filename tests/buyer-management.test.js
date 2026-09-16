@@ -178,8 +178,11 @@ test("usage returns aggregate and recent download data", async () => {
 });
 
 test("usage preserves empty recent-download results", async () => {
-  configuredDb(async () => ({ rows: [{ total_downloads: 0, records_downloaded: "0", versions_downloaded: 0, last_download_at: null }] }));
-  db.query.mock.mockImplementationOnce(async () => ({ rows: [] }));
+  const responses = [
+    { rows: [{ total_downloads: 0, records_downloaded: "0", versions_downloaded: 0, last_download_at: null }] },
+    { rows: [] }
+  ];
+  configuredDb(async () => responses.shift());
   const result = await buyers.usage("new-buyer");
   assert.deepEqual(result.recent_downloads, []);
   assert.equal(result.total_downloads, 0);
