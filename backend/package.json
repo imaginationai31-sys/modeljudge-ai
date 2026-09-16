@@ -17,19 +17,26 @@
     "release": "node ../scripts/create-release.js",
     "buyer-key": "node ../scripts/create-buyer-key.js",
     "migrate": "node ../scripts/migrate.js",
-    "test": "node --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=70 --test ../tests/calibration.test.js ../tests/pipeline-engine.test.js ../tests/quality-filter.test.js ../tests/reliability.test.js ../tests/reviewer.test.js ../tests/reviewer-quality-control.test.js ../tests/observability.test.js ../tests/release-engine.test.js",
-    "test:unit": "node --test ../tests/calibration.test.js ../tests/pipeline-engine.test.js ../tests/quality-filter.test.js ../tests/reliability.test.js ../tests/reviewer.test.js ../tests/reviewer-quality-control.test.js ../tests/observability.test.js ../tests/release-engine.test.js",
+    "check-env": "node ../scripts/check-env.js",
+    "test": "node --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=70 --test ../tests/calibration.test.js ../tests/check-env.test.js ../tests/pipeline-engine.test.js ../tests/quality-filter.test.js ../tests/reliability.test.js ../tests/reviewer.test.js ../tests/reviewer-quality-control.test.js ../tests/observability.test.js ../tests/release-engine.test.js",
+    "test:unit": "node --test ../tests/calibration.test.js ../tests/check-env.test.js ../tests/pipeline-engine.test.js ../tests/quality-filter.test.js ../tests/reliability.test.js ../tests/reviewer.test.js ../tests/reviewer-quality-control.test.js ../tests/observability.test.js ../tests/release-engine.test.js",
     "test:integration": "node --test ../tests/api.integration.test.js",
     "test:postgres": "node --test ../tests/postgres.integration.test.js",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=70 --test ../tests/calibration.test.js ../tests/pipeline-engine.test.js ../tests/quality-filter.test.js ../tests/reliability.test.js ../tests/reviewer.test.js ../tests/reviewer-quality-control.test.js ../tests/observability.test.js ../tests/release-engine.test.js",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=85 --test-coverage-branches=70 --test ../tests/calibration.test.js ../tests/check-env.test.js ../tests/pipeline-engine.test.js ../tests/quality-filter.test.js ../tests/reliability.test.js ../tests/reviewer.test.js ../tests/reviewer-quality-control.test.js ../tests/observability.test.js ../tests/release-engine.test.js",
     "lint": "eslint ."
+  },
+  "coverageThreshold": {
+    "lines": 70,
+    "statements": 70,
+    "functions": 70,
+    "branches": 70
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "pg": "^8.16.3"
+    "express": "^5.2.1",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "eslint": "10.10.0"
