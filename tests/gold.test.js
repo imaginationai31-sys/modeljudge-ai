@@ -39,20 +39,20 @@ test("validates calibration submission requirements", () => {
 
 test("pickTask excludes attempted tasks when alternatives exist", async () => {
   const tasks = await loadGoldTasks();
-  const selected = pickTask("reviewer-1", ["GOLD-0001", "GOLD-0002"]);
+  const selected = pickTask(tasks, "reviewer-1", ["GOLD-0001", "GOLD-0002"]);
   assert.ok(tasks.some(task => task.gold_evaluation_id === selected.gold_evaluation_id));
   assert.notEqual(selected.gold_evaluation_id, "GOLD-0001");
   assert.notEqual(selected.gold_evaluation_id, "GOLD-0002");
 });
 
 test("pickTask returns null for an empty task set", () => {
-  assert.equal(pickTask("reviewer-1", []), null);
+  assert.equal(pickTask([], "reviewer-1", []), null);
 });
 
 test("pickTask falls back to the full task pool when every task is excluded", async () => {
   const tasks = await loadGoldTasks();
   const excluded = tasks.map(task => task.gold_evaluation_id);
-  const selected = pickTask("reviewer-1", excluded);
+  const selected = pickTask(tasks, "reviewer-1", excluded);
   assert.ok(tasks.some(task => task.gold_evaluation_id === selected.gold_evaluation_id));
 });
 
