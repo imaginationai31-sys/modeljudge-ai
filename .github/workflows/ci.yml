@@ -95,6 +95,8 @@ jobs:
           name: modeljudge-coverage
           path: backend/coverage/
           if-no-files-found: warn
+      - name: Run dataset quality gate
+        run: npm run data-quality
       - name: Validate dataset
         working-directory: backend
         run: npm run validate
