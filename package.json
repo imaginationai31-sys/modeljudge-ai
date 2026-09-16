@@ -2,11 +2,12 @@
   "name": "modeljudge-ai",
   "version": "1.0.0",
   "private": true,
-  "description": "ModelJudge AI evaluation and dataset platform",
+  "description": "ModelJudge AI evaluation and dataset platform; backend/package.json is the primary application dependency manifest.",
   "scripts": {
     "start": "node scripts/start.js",
     "build": "node scripts/verify-buyer-ready.js",
     "test": "npm --prefix backend test",
+    "check-env": "node scripts/check-env.js",
     "validate": "node scripts/validate-dataset.js",
     "verify": "node scripts/verify-buyer-ready.js"
   },
