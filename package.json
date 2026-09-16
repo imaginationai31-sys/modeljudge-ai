@@ -8,6 +8,7 @@
     "build": "node scripts/verify-buyer-ready.js",
     "test": "npm --prefix backend test",
     "check-env": "node scripts/check-env.js",
+    "data-quality": "node scripts/data-quality-gate.js",
     "validate": "node scripts/validate-dataset.js",
     "verify": "node scripts/verify-buyer-ready.js"
   },
