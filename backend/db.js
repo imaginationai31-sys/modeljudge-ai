@@ -1,9 +1,11 @@
 const { Pool } = require("pg");
+const { getConfig } = require("./config");
 
-const pool = process.env.DATABASE_URL ? new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false },
-  max: Number(process.env.DATABASE_POOL_MAX) || 10,
+const config = getConfig();
+const pool = config.databaseUrl ? new Pool({
+  connectionString: config.databaseUrl,
+  ssl: config.databaseSsl ? { rejectUnauthorized: false } : false,
+  max: config.databasePoolMax,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
   allowExitOnIdle: true
